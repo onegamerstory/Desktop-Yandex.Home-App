@@ -14,6 +14,78 @@ function App() {
   const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
 
+	const showNotification = (message: string, type: 'error' | 'success' = 'error') => {
+	  setNotification({ message, type });
+	  setTimeout(() => setNotification(null), 5000); // Auto hide
+	};	
+	
+	const stableSortData = useCallback((data: YandexUserInfoResponse): YandexUserInfoResponse => {
+        // 1. Сортировка устройств по ID (для стабильности при переключении)
+        const sortedDevices: Device[] = [...data.devices].sort((a, b) => a.id.localeCompare(b.id));
+
+        // 2. Сортировка комнат по названию
+        const sortedRooms: YandexRoom[] = [...data.rooms].sort((a, b) => a.name.localeCompare(b.name));
+
+        // 3. Сортировка сценариев по названию
+        const sortedScenarios: YandexScenario[] = [...data.scenarios].sort((a, b) => a.name.localeCompare(b.name));
+
+        return { 
+            ...data, 
+            devices: sortedDevices,
+            rooms: sortedRooms,
+            scenarios: sortedScenarios,
+        };
+    }, []);
+	
+	// --- 1. ФУНКЦИЯ ДЛЯ ТИХОГО ФОНОВОГО ОБНОВЛЕНИЯ ДАННЫХ (НЕ СБРАСЫВАЕТ SCROLL) ---
+  const refreshDashboardData = useCallback(async (apiToken: string) => {
+    try {
+      const data = await fetchUserInfo(apiToken);
+	  const sortedData = stableSortData(data);
+      setUserData(sortedData);
+      // Важно: не меняем appState, чтобы оставаться на Dashboard и не терять скролл
+    } catch (err: unknown) {
+      // Если при фоновом обновлении получаем ошибку авторизации,
+      // выходим из системы (fallback)
+      if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
+          await yandexApi.deleteSecureToken(); 
+          setToken(null);
+          setUserData(null);
+          setAppState(AppState.AUTH);
+          showNotification('Сессия истекла. Пожалуйста, введите токен заново.', 'error');
+      } else {
+        showNotification('Ошибка обновления данных.', 'error');
+      }
+    }
+  }, [showNotification, stableSortData]);
+  
+  
+	// --- 2. ФУНКЦИЯ ДЛЯ ИНИЦИАЛИЗАЦИИ И АВТОРИЗАЦИИ (МЕНЯЕТ appState) ---
+	const loadData = useCallback(async (apiToken: string) => {
+		setAppState(AppState.LOADING);
+		setErrorMsg(undefined);
+		try {
+		  const data = await fetchUserInfo(apiToken);
+		  const sortedData = stableSortData(data);
+		  setUserData(sortedData);
+		  setAppState(AppState.DASHBOARD);
+		} catch (err: unknown) {
+		  if (err instanceof Error) {
+			setErrorMsg(err.message);
+		  } else {
+			setErrorMsg('Неизвестная ошибка');
+		  }
+		  setAppState(AppState.AUTH);
+		  
+		  // If unauthorized, clear invalid token
+		  if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
+			  await yandexApi.deleteSecureToken();
+			  setToken(null);
+		  }
+		}
+	  }, [stableSortData]);
+
+
   // Initialize: Check Local Storage
   useEffect(() => {
     const checkToken = async () => {
@@ -30,35 +102,11 @@ function App() {
 		}
 	};
 	checkToken();
-  }, []);
+  }, [loadData]);
 
-  const showNotification = (message: string, type: 'error' | 'success' = 'error') => {
-      setNotification({ message, type });
-      setTimeout(() => setNotification(null), 5000); // Auto hide
-  };
+  
 
-  const loadData = async (apiToken: string) => {
-    setAppState(AppState.LOADING);
-    setErrorMsg(undefined);
-    try {
-      const data = await fetchUserInfo(apiToken);
-      setUserData(data);
-      setAppState(AppState.DASHBOARD);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMsg(err.message);
-      } else {
-        setErrorMsg('Неизвестная ошибка');
-      }
-      setAppState(AppState.AUTH);
-      
-      // If unauthorized, clear invalid token
-      if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
-          localStorage.removeItem(LOCAL_STORAGE_KEY);
-          setToken(null);
-      }
-    }
-  };
+  
 
   const handleTokenSubmit = async (newToken: string) => {
     setToken(newToken);
@@ -84,6 +132,7 @@ function App() {
     try {
         await executeScenario(token, scenarioId);
         showNotification('Сценарий успешно запущен', 'success');
+		refreshDashboardData(token);
     } catch (err) {
         if (err instanceof Error) {
             showNotification(err.message, 'error');
@@ -92,7 +141,7 @@ function App() {
         }
         throw err; // Re-throw to let component know
     }
-  }, [token]);
+  }, [token, refreshDashboardData]);
 
   const handleToggleDevice = useCallback(async (deviceId: string, currentState: boolean) => {
       if (!token || !userData) return;
@@ -123,8 +172,11 @@ function App() {
                   return device;
               });
 
-              return { ...prevData, devices: updatedDevices };
+              return stableSortData({ ...prevData, devices: updatedDevices });
           });
+		  
+		  refreshDashboardData(token);
+		  
       } catch (err) {
           if (err instanceof Error) {
             showNotification(`Ошибка: ${err.message}`, 'error');
@@ -133,7 +185,7 @@ function App() {
           }
           throw err;
       }
-  }, [token, userData]);
+  }, [token, userData, refreshDashboardData, stableSortData]);
 
   // Global Notification Toast
   const NotificationToast = () => {
