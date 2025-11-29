@@ -13,6 +13,7 @@ function App() {
   const [userData, setUserData] = useState<YandexUserInfoResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
 	const showNotification = (message: string, type: 'error' | 'success' = 'error') => {
 	  setNotification({ message, type });
@@ -39,10 +40,12 @@ function App() {
 	
 	// --- 1. ФУНКЦИЯ ДЛЯ ТИХОГО ФОНОВОГО ОБНОВЛЕНИЯ ДАННЫХ (НЕ СБРАСЫВАЕТ SCROLL) ---
   const refreshDashboardData = useCallback(async (apiToken: string) => {
+	setIsRefreshing(true);
     try {
       const data = await fetchUserInfo(apiToken);
 	  const sortedData = stableSortData(data);
       setUserData(sortedData);
+	  showNotification('Данные успешно обновлены.', 'success');
       // Важно: не меняем appState, чтобы оставаться на Dashboard и не терять скролл
     } catch (err: unknown) {
       // Если при фоновом обновлении получаем ошибку авторизации,
@@ -56,7 +59,9 @@ function App() {
       } else {
         showNotification('Ошибка обновления данных.', 'error');
       }
-    }
+    } finally {
+        setIsRefreshing(false); // <-- Конец загрузки
+    }
   }, [showNotification, stableSortData]);
   
   
@@ -221,6 +226,8 @@ function App() {
           onLogout={handleLogout} 
           onExecuteScenario={handleExecuteScenario} 
           onToggleDevice={handleToggleDevice}
+		  onRefresh={() => token && refreshDashboardData(token)}
+          isRefreshing={isRefreshing}
         />
         <NotificationToast />
       </>

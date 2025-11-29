@@ -2,16 +2,18 @@ import React from 'react';
 import { YandexUserInfoResponse, YandexScenario } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
-import { LogOut, Home, Layers, MonitorSmartphone } from 'lucide-react';
+import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw } from 'lucide-react';
 
 interface DashboardProps {
   data: YandexUserInfoResponse;
   onLogout: () => void;
   onExecuteScenario: (id: string) => Promise<void>;
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteScenario, onToggleDevice }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteScenario, onToggleDevice, onRefresh, isRefreshing }) => {
   const activeScenarios = data.scenarios.filter(s => s.is_active);
 
   return (
@@ -31,6 +33,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                 <span className="text-xs text-slate-400 font-medium">Онлайн</span>
              </div>
+			 <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Обновить данные">
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
             <button
               onClick={onLogout}
               className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
