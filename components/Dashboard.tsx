@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { YandexUserInfoResponse, YandexScenario } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
-import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw } from 'lucide-react';
+import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X } from 'lucide-react';
 
 interface DashboardProps {
   data: YandexUserInfoResponse;
@@ -15,6 +15,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteScenario, onToggleDevice, onRefresh, isRefreshing }) => {
   const activeScenarios = data.scenarios.filter(s => s.is_active);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-slate-100 pb-12">
@@ -41,7 +42,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
             <button
-              onClick={onLogout}
+              onClick={() => setShowConfirmModal(true)}
               className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
               title="Выйти"
             >
@@ -152,6 +153,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
         </section>
 
       </main>
+	  
+      {showConfirmModal && (
+          <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center backdrop-blur-sm">
+              <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-300">
+                  <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-xl font-bold text-slate-100">Подтверждение выхода</h3>
+                      <button onClick={() => setShowConfirmModal(false)} className="text-slate-400 hover:text-white transition-colors">
+                          <X className="w-5 h-5" />
+                      </button>
+                  </div>
+
+                  <p className="text-slate-300 mb-6 text-sm">
+                      Вы уверены, что хотите выйти из учетной записи? После этого действия для последующего входа потребуется токен.
+                  </p>
+
+                  <div className="flex justify-end gap-3">
+                      {/* Кнопка "Нет" (выделена красной обводкой) */}
+                      <button
+                          onClick={() => setShowConfirmModal(false)}
+                          className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-red-500 text-red-400 hover:bg-red-900/30"
+                      >
+                          Нет
+                      </button>
+
+                      {/* Кнопка "Да, уверен" */}
+                      <button
+                          onClick={() => {
+                              onLogout(); // Вызов функции выхода из App.tsx
+                              setShowConfirmModal(false); // Закрываем модальное окно
+                          }}
+                          className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary hover:bg-blue-600 text-white"
+                      >
+                          Да, уверен
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+	  
     </div>
   );
 };
