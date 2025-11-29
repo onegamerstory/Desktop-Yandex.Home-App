@@ -71,7 +71,7 @@ export const TokenInput: React.FC<TokenInputProps> = ({ onTokenSubmit, isLoading
 
         <div className="mt-8 text-center">
           <a 
-            href="https://boosty.to/onegamerstory/posts/4d851516-7f62-444f-9de1-3de56a24c2d3?share=post_link" 
+            href="https://github.com/onegamerstory/Desktop-Yandex.Home-App/blob/main/README.md" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-xs text-secondary hover:text-primary transition-colors"
