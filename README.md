@@ -1,1 +1,0 @@
-# Desktop-Yandex.Home-App
