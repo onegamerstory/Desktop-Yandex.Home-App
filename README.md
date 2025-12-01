@@ -13,17 +13,17 @@
 
 ## 1. Создаем/регистрируем приложение на сервере авторизации Яндекс OAuth 
 
-Переходим по [ссылке](https://passport.yandex.ru/auth?retpath=https%3A%2F%2Foauth.yandex.ru%2Fclient%2Fnew%2F&noreturn=1) на Яндекс OAuth
+Переходим по [ссылке](https://passport.yandex.ru/auth?retpath=https%3A%2F%2Foauth.yandex.ru%2Fclient%2Fnew%2F&noreturn=1) на Яндекс OAuth.
 
-В качестве платформы приложения выбираем Веб-сервисы, а в строке `Redirect URI` выбираем пункт **"Подставить URL для отладки"**
-<img width="1486" height="837" alt="image" src="https://github.com/user-attachments/assets/312922ba-3126-48a2-a082-4a8c540419dd" />
+Нажимаем `Создать приложение` или сайт сам предложит это сделать. Выбираем пункт `Для доступа к API или отладки`:
 
-В доступах к данным сами прописываем два доступа: 
+<img width="465" height="439" alt="image" src="https://github.com/user-attachments/assets/6eb53c26-2aa2-4b95-a812-ab4e198c9432" />
+
+На странице заполняем название (любое), а ниже в поле `Доступ к данным` сами прописываем два доступа: 
 - `iot:view`
 - `iot:control`
 
-<img width="841" height="213" alt="image" src="https://github.com/user-attachments/assets/d5a3cb15-4262-4842-9f92-c003b8b37310" />
-<img width="821" height="205" alt="image" src="https://github.com/user-attachments/assets/aa071db0-1956-4521-b6e4-e8df0df86bc0" />
+<img width="639" height="324" alt="image" src="https://github.com/user-attachments/assets/0f48040c-a19d-42f1-9c3a-d3a72783f224" />
 
 
 ## 2. Получаем токен для нашего приложения
