@@ -1,7 +1,7 @@
 {
   "name": "yandex-smart-home-control",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "main": "main.js",
   "scripts": {
@@ -26,32 +26,45 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   },
+  
+
+  "author": "Your Name <youremail@example.com>",
+  "description": "Yandex Smart Home Control Application",
+  
   "build": {
     "appId": "com.onegamerstory.smarthomecontrol",
     "productName": "Yandex Smart Home Control",
-	"artifactName": "${productName} Setup v${version}.${ext}",
-	"icon": "resources/icon.png",
+    "artifactName": "${productName} Setup v${version}.${ext}",
+    "icon": "resources/icon.png",
     "files": [
-		"dist/**/*",        
-		"main.js",          
-		"preload.cjs",      
-		"yandex-api.js",    
-		"node_modules/**/*",
-		"resources/*"
-	],
+      "dist/**/*",
+      "main.js",
+      "preload.cjs",
+      "yandex-api.js",
+      "node_modules/**/*", 
+      "resources/*"
+    ],
     "directories": {
       "output": "release"
     },
+    
+    
     "win": {
       "target": "nsis",
-	  "icon": "resources/icon.ico"
+      "icon": "resources/icon.ico"
     },
+    
     "mac": {
-	  "category": "public.app-category.utilities",
+      "category": "public.app-category.utilities",
       "target": "dmg",
-	  "icon": "resources/icon.icns"
+      "icon": "resources/icon.icns",
+      "extendInfo": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
-	"dmg": {
+    "dmg": {
       "title": "Smart Home Control Installer",
       "iconSize": 128,
       "contents": [
@@ -67,6 +80,15 @@
           "type": "file"
         }
       ]
+    },
+    
+    "linux": {
+      "target": ["AppImage", "deb", "rpm"],
+      "category": "Utility",
+      "icon": "resources/icon.png",
+      "maintainer": "Your Name <youremail@example.com>",
+      "description": "Yandex Smart Home Control Application",
+      "executableName": "yandex-smart-home-control"
     }
   }
 }
