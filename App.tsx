@@ -3,8 +3,9 @@ import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
 import { fetchUserInfo, executeScenario, toggleDevice } from './services/yandexIoT';
 // Обновляем импорт, чтобы включить Device
-import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType } from './types'; 
+import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType } from './types'; 
 import { AlertCircle, X } from 'lucide-react';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Получаем доступ к IPC-мосту, предоставленному Electron preload скриптом
 const yandexApi = window.api; 
@@ -334,67 +335,69 @@ useEffect(() => {
 }, [handleToggleDevice, handleExecuteScenario, token]);  // Зависимости корректны
   
 
-  // Global Notification Toast Component
-  const NotificationToast = () => {
-      if (!notification) return null;
-      return (
-          <div className={`fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 border ${notification.type === 'error' ? 'bg-red-900/90 border-red-500/30 text-white' : 'bg-green-900/90 border-green-500/30 text-white'}`}>
-              {notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-white/50 border-t-white animate-spin-none" />} 
-              <span className="text-sm font-medium">{notification.message}</span>
-              <button onClick={() => setNotification(null)} className="ml-2 opacity-70 hover:opacity-100">
-                  <X className="w-4 h-4"/>
-              </button>
-          </div>
-      );
-  };
+  // Global Notification Toast Component
+  const NotificationToast = () => {
+      if (!notification) return null;
+      return (
+          <div className={`fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 border ${notification.type === 'error' ? 'bg-red-100 dark:bg-red-900/90 border-red-300 dark:border-red-500/30 text-red-900 dark:text-white' : 'bg-green-100 dark:bg-green-900/90 border-green-300 dark:border-green-500/30 text-green-900 dark:text-white'}`}>
+              {notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-gray-600 dark:border-white/50 border-t-gray-600 dark:border-t-white animate-spin-none" />} 
+              <span className="text-sm font-medium">{notification.message}</span>
+              <button onClick={() => setNotification(null)} className="ml-2 opacity-70 hover:opacity-100">
+                  <X className="w-4 h-4"/>
+              </button>
+          </div>
+      );
+  };
 
   // --- Рендеринг в зависимости от состояния приложения ---
 
-  // Экран загрузки
-  if (appState === AppState.LOADING) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400 animate-pulse">Загрузка данных...</p>
-        </div>
-        <NotificationToast />
-      </div>
-    );
-  }
+  // Экран загрузки
+  if (appState === AppState.LOADING) {
+    return (
+      <ThemeProvider>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-600 dark:text-slate-400 animate-pulse">Загрузка данных...</p>
+          </div>
+          <NotificationToast />
+        </div>
+      </ThemeProvider>
+    );
+  }
 
-  // Основная панель
-  if (appState === AppState.DASHBOARD && userData) {
-    return (
-      <>
-        <Dashboard 
-          data={userData} 
-          onLogout={handleLogout} 
-          onExecuteScenario={handleExecuteScenario} 
-          onToggleDevice={handleToggleDevice}
-		  onRefresh={() => token && refreshDashboardData(token)}
-          isRefreshing={isRefreshing}
-		  favoriteDeviceIds={favoriteDeviceIds}
-          onToggleDeviceFavorite={handleToggleDeviceFavorite}
-          favoriteScenarioIds={favoriteScenarioIds}
-          onToggleScenarioFavorite={handleToggleScenarioFavorite}
-        />
-        <NotificationToast />
-      </>
-    );
-  }
+  // Основная панель
+  if (appState === AppState.DASHBOARD && userData) {
+    return (
+      <ThemeProvider>
+        <Dashboard 
+          data={userData} 
+          onLogout={handleLogout} 
+          onExecuteScenario={handleExecuteScenario} 
+          onToggleDevice={handleToggleDevice}
+		  onRefresh={() => token && refreshDashboardData(token)}
+          isRefreshing={isRefreshing}
+		  favoriteDeviceIds={favoriteDeviceIds}
+          onToggleDeviceFavorite={handleToggleDeviceFavorite}
+          favoriteScenarioIds={favoriteScenarioIds}
+          onToggleScenarioFavorite={handleToggleScenarioFavorite}
+        />
+        <NotificationToast />
+      </ThemeProvider>
+    );
+  }
 
-  // Экран авторизации (по умолчанию)
-  return (
-    <>
-        <TokenInput 
-        onTokenSubmit={handleTokenSubmit} 
-        isLoading={false}
-        error={errorMsg}
-        />
-        <NotificationToast />
-    </>
-  );
+  // Экран авторизации (по умолчанию)
+  return (
+    <ThemeProvider>
+        <TokenInput 
+        onTokenSubmit={handleTokenSubmit} 
+        isLoading={false}
+        error={errorMsg}
+        />
+        <NotificationToast />
+    </ThemeProvider>
+  );
 }
 
 export default App;
