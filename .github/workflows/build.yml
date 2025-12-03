@@ -5,8 +5,6 @@ on:
     # Рабочий процесс запускается ТОЛЬКО при пуше тега, соответствующего паттерну vX.Y.Z
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-  # УДАЛЕНА секция branches: для main
-  # УДАЛЕНА секция pull_request: 
 
 jobs:
   build:
@@ -29,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Рекомендуется использовать актуальную LTS-версию Node.js
+          node-version: 20 
           
       # --- Кэширование папки node_modules (для ускорения) ---
       - name: Cache Node Modules
