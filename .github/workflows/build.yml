@@ -55,13 +55,12 @@ jobs:
       # Шаг сборки для всех платформ
       # ----------------------------------------------------------------------
       - name: Build Electron App (Dist)
-        run: npm run dist
-        # ВОССТАНОВЛЕНИЕ GH_TOKEN и добавление NO_PUBLISH=true
+        # ИЗМЕНЕНИЕ: Используем "--publish never", чтобы полностью отключить публикацию electron-builder 
+        # и избежать конфликта с action-gh-release. 
+        # Флаг "--" необходим для передачи аргументов в скрипт npm.
+        run: npm run dist -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Запрещает electron-builder публиковать релиз, даже если видит тег.
-          # Это предотвращает конфликт с softprops/action-gh-release.
-          NO_PUBLISH: true
           # Отключает автопоиск сертификатов для подписи, который не нужен в CI.
           CSC_IDENTITY_AUTO_DISCOVERY: false
         
