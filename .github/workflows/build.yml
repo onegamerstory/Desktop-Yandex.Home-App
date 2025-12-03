@@ -40,13 +40,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
             
-      - name: Install Dependencies
-        # Используем '--unsafe-perm' для корректной сборки нативных модулей (keytar)
-        # Опции --timing и --no-progress помогают избежать EPERM в Windows
-        run: npm install --unsafe-perm --timing --no-progress
+      # ----------------------------------------------------------------------
+      # НОВОЕ РЕШЕНИЕ: Установка в два этапа для стабильности
+      # ----------------------------------------------------------------------
+      - name: Install Dependencies (Non-Native)
+        # Установка ВСЕХ зависимостей (включая нативные, но без их сборки)
+        run: npm install --ignore-scripts --unsafe-perm --timing --no-progress
         
-      # УДАЛЕН ШАГ "Postinstall (Rebuild native modules)", 
-      # поскольку он не нужен, и скрипт "postinstall" отсутствует в package.json.
+      - name: Rebuild Native Modules (for Electron stability)
+        # Использование официального инструмента electron-builder для корректной пересборки keytar
+        run: npx electron-builder install-app-deps
         
       # ----------------------------------------------------------------------
       # Шаг сборки для всех платформ
