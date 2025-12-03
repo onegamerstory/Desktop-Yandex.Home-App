@@ -1,0 +1,86 @@
+name: Build Desktop App Installers (CI)
+
+on:
+  push:
+    # Запускать сборку при пуше в основную ветку
+    branches:
+      - main
+    # Запускать сборку при создании тега для релиза (например, v1.2.1)
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+    # Запускать сборку при открытии Pull Request
+    branches:
+      - main
+
+jobs:
+  build:
+    # Используем матрицу, чтобы запустить одни и те же шаги на разных ОС
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Рекомендуется использовать актуальную LTS-версию Node.js
+          
+      - name: Install Dependencies
+        # Используем '--unsafe-perm' для корректной сборки нативных модулей (keytar)
+        run: npm install --unsafe-perm
+        
+      # Этот шаг необходим для кросс-компиляции нативных модулей Electron
+      - name: Postinstall (Rebuild native modules)
+        run: npm run postinstall || echo "Postinstall step skipped or failed gracefully."
+        
+      # ----------------------------------------------------------------------
+      # Шаг сборки для всех платформ
+      # ----------------------------------------------------------------------
+      - name: Build Electron App (Dist)
+        run: npm run dist
+        
+      # ----------------------------------------------------------------------
+      # Загрузка артефактов
+      # ----------------------------------------------------------------------
+      - name: Upload Artifacts (Windows, Mac, Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          # Используем имя файла, соответствующее ОС для легкой идентификации
+          name: ${{ matrix.os }}-build-artifacts
+          # Папка, указанная в вашем package.json
+          path: release/
+          retention-days: 7
+          
+  # ----------------------------------------------------------------------
+  # Шаг создания релиза на GitHub (выполняется только после успешной сборки)
+  # ----------------------------------------------------------------------
+  release:
+    name: Create GitHub Release
+    # Запускается только после успешного завершения всех сборок
+    needs: build 
+    # Запускается только при создании тега (чтобы не создавать релиз при каждом пуше)
+    if: startsWith(github.ref, 'refs/tags/v') 
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Автоматически генерирует заметки к релизу из коммитов
+          generate_release_notes: true 
+          # Загружает все файлы-установщики из папки artifacts в релиз
+          files: artifacts/**/*
+          draft: true # Оставить черновиком, чтобы вы могли проверить перед публикацией
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
