@@ -55,8 +55,7 @@ jobs:
       # Шаг сборки для всех платформ
       # ----------------------------------------------------------------------
       - name: Build Electron App (Dist)
-        # ИЗМЕНЕНИЕ: Используем "--publish never", чтобы полностью отключить публикацию electron-builder 
-        # и избежать конфликта с action-gh-release. 
+        # Используем "--publish never", чтобы полностью отключить публикацию electron-builder 
         # Флаг "--" необходим для передачи аргументов в скрипт npm.
         run: npm run dist -- --publish never
         env:
@@ -75,36 +74,3 @@ jobs:
           # Папка, указанная в вашем package.json
           path: release/
           retention-days: 7
-          
-  # ----------------------------------------------------------------------
-  # Шаг создания релиза на GitHub (выполняется только после успешной сборки)
-  # ----------------------------------------------------------------------
-  release:
-    name: Create GitHub Release
-    # Убедимся, что и этот шаг имеет права на запись
-    permissions:
-      contents: write
-      packages: write
-    
-    # Запускается только после успешного завершения всех сборок
-    needs: build 
-    # Условие if: startsWith(...) теперь избыточно, но оставлено для наглядности
-    if: startsWith(github.ref, 'refs/tags/v') 
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          # Автоматически генерирует заметки к релизу из коммитов
-          generate_release_notes: true 
-          # Загружает все файлы-установщики из папки artifacts в релиз
-          files: artifacts/**/*
-          draft: true # Оставить черновиком, чтобы вы могли проверить перед публикацией
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
