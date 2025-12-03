@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: 20 # Рекомендуется использовать актуальную LTS-версию Node.js
           
-      # --- НОВОЕ: Кэширование папки node_modules (для ускорения) ---
+      # --- Кэширование папки node_modules (для ускорения) ---
       - name: Cache Node Modules
         uses: actions/cache@v4
         with:
@@ -42,13 +42,11 @@ jobs:
             
       - name: Install Dependencies
         # Используем '--unsafe-perm' для корректной сборки нативных модулей (keytar)
-        # НОВОЕ: Добавлен таймаут (таймауты часто помогают избежать EPERM в Windows)
+        # Опции --timing и --no-progress помогают избежать EPERM в Windows
         run: npm install --unsafe-perm --timing --no-progress
         
-      # Этот шаг необходим для кросс-компиляции нативных модулей Electron
-      - name: Postinstall (Rebuild native modules)
-        # НОВОЕ: Добавлен таймаут на случай проблем с правами/блокировкой файлов
-        run: npm run postinstall || echo "Postinstall step skipped or failed gracefully."
+      # УДАЛЕН ШАГ "Postinstall (Rebuild native modules)", 
+      # поскольку он не нужен, и скрипт "postinstall" отсутствует в package.json.
         
       # ----------------------------------------------------------------------
       # Шаг сборки для всех платформ
