@@ -3,7 +3,7 @@ import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
 import { fetchUserInfo, executeScenario, toggleDevice } from './services/yandexIoT';
 // Обновляем импорт, чтобы включить Device
-import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType } from './types'; 
+import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
 import { AlertCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -34,6 +34,7 @@ function App() {
   const [appState, setAppState] = useState<AppState>(AppState.LOADING);
   const [token, setToken] = useState<string | null>(null);
   const [userData, setUserData] = useState<YandexUserInfoResponse | null>(null);
+  const [activeHouseholdId, setActiveHouseholdId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -49,7 +50,7 @@ function App() {
 	}, []); // Зависимости не требуются
 
 	// --- Функция для обеспечения стабильного порядка элементов ---
-	const stableSortData = useCallback((data: YandexUserInfoResponse): YandexUserInfoResponse => {
+  const stableSortData = useCallback((data: YandexUserInfoResponse): YandexUserInfoResponse => {
         // 1. Сортировка устройств по ID (для стабильности при переключении)
         const sortedDevices: YandexDevice[] = [...data.devices].sort((a, b) => a.id.localeCompare(b.id));
 
@@ -71,12 +72,19 @@ function App() {
 	// --- ФУНКЦИИ ДЕЙСТВИЙ ---
 
 	// Функция для тихого фонового обновления данных (не сбрасывает scroll)
-  	const refreshDashboardData = useCallback(async (apiToken: string) => {
+  const refreshDashboardData = useCallback(async (apiToken: string) => {
 		setIsRefreshing(true);
-    	try {
+    		try {
       		const data = await fetchUserInfo(apiToken);
-	  		const sortedData = stableSortData(data);
+     		const sortedData = stableSortData(data);
       		setUserData(sortedData);
+            const households = sortedData.households || [];
+            setActiveHouseholdId(prev => {
+              if (prev && households.some(h => h.id === prev)) {
+                return prev;
+              }
+              return households.length > 0 ? households[0].id : null;
+            });
 	  		showNotification('Данные успешно обновлены.', 'success');
       		// Важно: не меняем appState, чтобы оставаться на Dashboard и не терять скролл
     	} catch (err: unknown) {
@@ -103,6 +111,13 @@ function App() {
 		  const data = await fetchUserInfo(apiToken);
 		  const sortedData = stableSortData(data);
 		  setUserData(sortedData);
+          const households = sortedData.households || [];
+          setActiveHouseholdId(prev => {
+            if (prev && households.some(h => h.id === prev)) {
+              return prev;
+            }
+            return households.length > 0 ? households[0].id : null;
+          });
 		  setAppState(AppState.DASHBOARD);
 		} catch (err: unknown) {
 		  if (err instanceof Error) {
@@ -119,6 +134,28 @@ function App() {
 		  }
 		}
 	  }, [stableSortData]);
+
+  // Переключение активного дома (round-robin)
+  const handleSwitchHousehold = useCallback(() => {
+    if (!userData || !userData.households || userData.households.length === 0) return;
+
+    setActiveHouseholdId(prev => {
+      const households = userData.households;
+      if (!prev) {
+        return households[0].id;
+      }
+      const currentIndex = households.findIndex(h => h.id === prev);
+      if (currentIndex === -1) {
+        return households[0].id;
+      }
+      const nextIndex = (currentIndex + 1) % households.length;
+      return households[nextIndex].id;
+    });
+
+    if (token) {
+      refreshDashboardData(token);
+    }
+  }, [userData, token, refreshDashboardData]);
 
 	// Обработчик переключения устройства (выполняется API-запрос + оптимистичное обновление)
   	const handleToggleDevice = useCallback(async (deviceId: string, currentState: boolean) => {
@@ -372,6 +409,9 @@ useEffect(() => {
       <ThemeProvider>
         <Dashboard 
           data={userData} 
+          households={userData.households as YandexHousehold[]}
+          activeHouseholdId={activeHouseholdId}
+          onSwitchHousehold={handleSwitchHousehold}
           onLogout={handleLogout} 
           onExecuteScenario={handleExecuteScenario} 
           onToggleDevice={handleToggleDevice}

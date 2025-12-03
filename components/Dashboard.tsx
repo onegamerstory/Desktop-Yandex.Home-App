@@ -1,26 +1,17 @@
-import React, { useState } from 'react';
-import { YandexUserInfoResponse, YandexScenario } from '../types';
+import React, { useMemo, useState, useCallback } from 'react';
+import { YandexUserInfoResponse, YandexScenario, YandexHousehold } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
-import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon } from 'lucide-react';
+import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
-
-// 1. Константы для хранения и значения по умолчанию (хорошая практика)
-const HOME_NAME_STORAGE_KEY = 'dashboard_home_name';
 const DEFAULT_HOME_NAME = 'Мой Дом';
-
-// 2. Функция для получения начального имени из localStorage
-const getInitialHomeName = () => {
-    // Проверяем, доступен ли localStorage (на случай рендеринга на сервере, хотя в Electron это обычно не нужно)
-    if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem(HOME_NAME_STORAGE_KEY) || DEFAULT_HOME_NAME;
-    }
-    return DEFAULT_HOME_NAME;
-};
 
 interface DashboardProps {
   data: YandexUserInfoResponse;
+  households: YandexHousehold[];
+  activeHouseholdId: string | null;
+  onSwitchHousehold: () => void;
   onLogout: () => void;
   onExecuteScenario: (id: string) => Promise<void>;
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
@@ -32,37 +23,145 @@ interface DashboardProps {
   onToggleScenarioFavorite: (id: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteScenario, onToggleDevice, onRefresh, isRefreshing, favoriteDeviceIds, onToggleDeviceFavorite, favoriteScenarioIds,  onToggleScenarioFavorite }) => {
-  const activeScenarios = data.scenarios.filter(s => s.is_active);
+export const Dashboard: React.FC<DashboardProps> = ({
+  data,
+  households,
+  activeHouseholdId,
+  onSwitchHousehold,
+  onLogout,
+  onExecuteScenario,
+  onToggleDevice,
+  onRefresh,
+  isRefreshing,
+  favoriteDeviceIds,
+  onToggleDeviceFavorite,
+  favoriteScenarioIds,
+  onToggleScenarioFavorite,
+}) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  // Инициализация homeName с использованием сохраненного значения
-  const [homeName, setHomeName] = useState(getInitialHomeName); 
-  const [isEditingName, setIsEditingName] = useState(false);
+  // Текущий дом и индикатор наличия нескольких домов
+  const currentHousehold = useMemo(() => {
+    if (!households || households.length === 0) return null;
+    if (activeHouseholdId) {
+      const found = households.find(h => h.id === activeHouseholdId);
+      if (found) return found;
+    }
+    return households[0];
+  }, [households, activeHouseholdId]);
 
-  const favoriteScenarios = data.scenarios.filter(s => favoriteScenarioIds.includes(s.id));
-  const favoriteDevices = data.devices.filter(d => favoriteDeviceIds.includes(d.id));
-    
-  const hasFavorites = favoriteScenarios.length > 0 || favoriteDevices.length > 0;
+  const homeName = currentHousehold?.name || DEFAULT_HOME_NAME;
+  const hasMultipleHomes = (households?.length || 0) > 1;
 
-  const handleSaveName = (event: React.FormEvent<HTMLInputElement>) => {
-        let newName = event.currentTarget.value.trim();
+  // Фильтрация сущностей по текущему дому
+  const roomsForHome = useMemo(() => {
+    if (!currentHousehold) return data.rooms;
+    return data.rooms.filter(room => room.household_id === currentHousehold.id);
+  }, [data.rooms, currentHousehold]);
 
-        if (newName === '') {
-            newName = DEFAULT_HOME_NAME;
+  const roomIdsForHome = useMemo(() => new Set(roomsForHome.map(r => r.id)), [roomsForHome]);
+
+  const devicesForHome = useMemo(() => {
+    if (!currentHousehold) return data.devices;
+
+    return data.devices.filter(device => {
+      const anyDevice = device as any;
+      const deviceHouseholdId: string | undefined = anyDevice.household_id;
+
+      if (deviceHouseholdId) {
+        return deviceHouseholdId === currentHousehold.id;
+      }
+
+      // Если household_id нет, привязываем устройство к дому через комнату
+      if (device.room && roomIdsForHome.has(device.room)) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [data.devices, currentHousehold, roomIdsForHome]);
+
+  // Карта соответствия deviceId -> householdId (по данным устройств и комнат)
+  const deviceHouseholdMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    data.devices.forEach(device => {
+      const anyDevice = device as any;
+      let householdId: string | undefined =
+        typeof anyDevice.household_id === 'string' ? anyDevice.household_id : undefined;
+
+      if (!householdId && device.room) {
+        const room = data.rooms.find(r => r.id === device.room);
+        if (room) {
+          householdId = room.household_id;
         }
+      }
 
-        setHomeName(newName);
-        
-        // --- Главное изменение: Запись в localStorage ---
-        if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem(HOME_NAME_STORAGE_KEY, newName);
+      if (householdId) {
+        map.set(device.id, householdId);
+      }
+    });
+
+    return map;
+  }, [data.devices, data.rooms]);
+
+  const isScenarioInCurrentHome = useCallback(
+    (scenario: YandexScenario) => {
+      // Если API не вернул несколько домов, оставляем поведение "один дом" и не фильтруем.
+      if (!households || households.length <= 1) {
+        return true;
+      }
+
+      // В режиме нескольких домов сценарий должен быть жёстко привязан к дому через устройства.
+      if (!currentHousehold) return false;
+
+      const anyScenario = scenario as any;
+      const steps: any[] = Array.isArray(anyScenario.steps) ? anyScenario.steps : [];
+
+      // Собираем items из steps[].parameters.items[]
+      const items: any[] = [];
+      for (const step of steps) {
+        const parameters = step?.parameters;
+        if (!parameters) continue;
+
+        const stepItems: any[] = Array.isArray(parameters.items) ? parameters.items : [];
+        for (const it of stepItems) {
+          items.push(it);
         }
-        // ------------------------------------------------
+      }
 
-        setIsEditingName(false);
-    };
+      // Если в сценарии нет корректных items/id устройств — сценарий считается "ничейным" и исключается.
+      if (items.length === 0) return false;
+
+      const targetHouseholdId = currentHousehold.id;
+
+      for (const item of items) {
+        const deviceId = item && typeof item.id === 'string' ? item.id : null;
+        if (!deviceId) continue;
+
+        const deviceHouseholdId = deviceHouseholdMap.get(deviceId);
+        if (deviceHouseholdId === targetHouseholdId) {
+          return true;
+        }
+      }
+
+      // Ни одно из устройств сценария не относится к текущему дому — исключаем сценарий.
+      return false;
+    },
+    [households, currentHousehold, deviceHouseholdMap]
+  );
+
+  const activeScenarios = data.scenarios.filter(
+    s => s.is_active && isScenarioInCurrentHome(s)
+  );
+
+  const favoriteScenarios = data.scenarios.filter(
+    s => favoriteScenarioIds.includes(s.id) && isScenarioInCurrentHome(s)
+  );
+  const favoriteDevices = devicesForHome.filter(d => favoriteDeviceIds.includes(d.id));
+
+  const hasFavorites = favoriteScenarios.length > 0 || favoriteDevices.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-900 dark:text-slate-100 pb-12">
@@ -73,34 +172,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
             <div className="p-2 bg-purple-100 dark:bg-primary/20 rounded-lg">
               <Home className="w-5 h-5 text-purple-600 dark:text-primary" />
             </div>
-            {isEditingName ? (
-				<input
-				  type="text"
-				  value={homeName}
-				  onChange={(e) => setHomeName(e.target.value)}
-				  onBlur={handleSaveName} // Сохранение при потере фокуса
-				  onKeyDown={(e) => {
-					if (e.key === 'Enter') {
-					  handleSaveName(e); // Сохранение при нажатии Enter
-					} else if (e.key === 'Escape') {
-						setIsEditingName(false); // Отмена при нажатии Esc
-					}
-				  }}
-				  className="text-lg font-bold tracking-tight bg-gray-200 dark:bg-slate-700 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-primary text-slate-900 dark:text-slate-100"
-				  autoFocus // Установить фокус сразу после перехода в режим редактирования
-				  aria-label="Имя Дома"
-				  maxLength={30} // Ограничение на длину имени
-				/>
-			  ) : (
-				// В режиме отображения делаем H1 кликабельным для перехода в режим редактирования
-				<h1 
-				  className="text-lg font-bold tracking-tight cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors text-slate-900 dark:text-slate-100"
-				  onClick={() => setIsEditingName(true)} // Переключение в режим редактирования
-				  title="Нажмите, чтобы изменить название"
-				>
-				  {homeName}
-				</h1>
-			  )}
+            <div className="flex items-center gap-1">
+              <h1
+                className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100"
+                title={homeName}
+              >
+                {homeName}
+              </h1>
+              {hasMultipleHomes && (
+                <button
+                  type="button"
+                  onClick={onSwitchHousehold}
+                  className="ml-1 inline-flex items-center justify-center w-7 h-7 rounded-full border border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600 bg-transparent hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Переключить дом"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-4">
@@ -141,14 +230,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
                 <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400"><Layers className="w-6 h-6"/></div>
                 <div>
                     <p className="text-sm text-slate-600 dark:text-secondary">Комнат</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{data.rooms.length}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{roomsForHome.length}</p>
                 </div>
             </div>
             <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
                 <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400"><MonitorSmartphone className="w-6 h-6"/></div>
                 <div>
                     <p className="text-sm text-slate-600 dark:text-secondary">Устройств</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{data.devices.length}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{devicesForHome.length}</p>
                 </div>
             </div>
         </div>
@@ -231,9 +320,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
         <section>
             <h2 className="text-2xl font-bold mb-8 text-slate-900 dark:text-slate-100">Устройства</h2>
             
-            {data.rooms.length === 0 && data.devices.length > 0 && (
+            {roomsForHome.length === 0 && devicesForHome.length > 0 && (
                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {data.devices.map(device => (
+                    {devicesForHome.map(device => (
                         <DeviceCard 
 						key={device.id} 
 						device={device} 
@@ -246,8 +335,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
             )}
 
             <div className="space-y-8">
-                {data.rooms.map(room => {
-                    const roomDevices = data.devices.filter(d => room.devices.includes(d.id));
+                {roomsForHome.map(room => {
+                    const roomDevices = devicesForHome.filter(d => room.devices.includes(d.id));
                     if (roomDevices.length === 0) return null;
                     
                     return (
@@ -274,8 +363,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onLogout, onExecuteS
             
             {/* Unassigned Devices */}
              {(() => {
-                 const assignedIds = new Set(data.rooms.flatMap(r => r.devices));
-                 const unassignedDevices = data.devices.filter(d => !assignedIds.has(d.id));
+                 const assignedIds = new Set(roomsForHome.flatMap(r => r.devices));
+                 const unassignedDevices = devicesForHome.filter(d => !assignedIds.has(d.id));
                  if (unassignedDevices.length === 0) return null;
 
                  return (
