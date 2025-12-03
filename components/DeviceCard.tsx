@@ -20,6 +20,37 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
   const isToggleable = !!onOffCapability;
   const isOn = onOffCapability?.state?.value === true;
 
+  // Sensor detection: ищем свойство с текущим значением
+  const sensorProperty = (device.properties ?? []).find(prop => {
+    const anyProp = prop as any;
+    const type: string | undefined = anyProp?.type;
+    const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+    return (
+      typeof type === 'string' &&
+      type.includes('devices.properties') &&
+      typeof instance === 'string'
+    );
+  }) as any | undefined;
+
+  const isSensor = !isToggleable && !!sensorProperty;
+
+  const sensorInstance: string | undefined =
+    sensorProperty?.parameters?.instance ?? sensorProperty?.state?.instance;
+  const rawSensorValue: unknown = sensorProperty?.state?.value;
+  const rawSensorUnit: string | undefined =
+    sensorProperty?.parameters?.unit ?? sensorProperty?.state?.unit;
+
+  const resolvedUnit =
+    rawSensorUnit ||
+    (sensorInstance === 'humidity' ? '%' : sensorInstance === 'temperature' ? '°C' : '');
+
+  const formattedSensorValue =
+    typeof rawSensorValue === 'number'
+      ? `${rawSensorValue}${resolvedUnit ?? ''}`
+      : typeof rawSensorValue === 'string'
+      ? `${rawSensorValue}${resolvedUnit ?? ''}`
+      : null;
+
   const handleClick = async () => {
     if (!isToggleable || loading) return;
 
@@ -39,17 +70,22 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
   return (
     <button
       onClick={handleClick}
-      disabled={!isToggleable || loading}
+      // Отключаем только во время загрузки, чтобы датчики без on_off
+      // всё равно можно было добавлять/убирать из избранного.
+      disabled={loading}
       className={`
         relative overflow-hidden group
         flex flex-col p-4 gap-3
         border rounded-xl text-left
         transition-all duration-200 ease-out
         w-full
-        ${isToggleable ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default opacity-80'}
-        ${isOn 
-            ? 'bg-purple-50 dark:bg-primary/20 border-purple-300 dark:border-primary/50 shadow-purple-200 dark:shadow-[0_0_15px_rgba(59,130,246,0.15)]' 
-            : 'bg-white dark:bg-surface border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+        ${isToggleable ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default'}
+        ${
+          isToggleable
+            ? isOn
+              ? 'bg-purple-50 dark:bg-primary/20 border-purple-300 dark:border-primary/50 shadow-purple-200 dark:shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+              : 'bg-white dark:bg-surface border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+            : 'bg-white dark:bg-surface border-gray-200 dark:border-white/5'
         }
       `}
     >
@@ -69,20 +105,40 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
       </button>
 	
       <div className="flex items-start justify-between w-full">
-        <div className={`
+        <div
+          className={`
             p-2 rounded-full transition-colors duration-300
-            ${isOn ? 'bg-purple-600 dark:bg-primary text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400'}
-        `}>
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-5 h-5" })}
+            ${
+              isToggleable
+                ? isOn
+                  ? 'bg-purple-600 dark:bg-primary text-white'
+                  : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400'
+                : 'bg-purple-50 dark:bg-primary text-purple-600 dark:text-slate-100'
+            }
+        `}
+        >
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
+              className: 'w-5 h-5',
+            })
+          )}
         </div>
-
-        
       </div>
 
       <div className="mt-2">
-        <p className="font-medium text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">{device.name}</p>
+        <p className="font-medium text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">
+          {device.name}
+        </p>
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-            {loading ? 'Обновление...' : (isOn ? 'Включено' : 'Выключено')}
+          {loading
+            ? 'Обновление...'
+            : isSensor && formattedSensorValue
+            ? formattedSensorValue
+            : isOn
+            ? 'Включено'
+            : 'Выключено'}
         </p>
       </div>
 	  

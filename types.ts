@@ -18,6 +18,26 @@ export interface YandexCapability {
   parameters?: unknown;
 }
 
+// Дополнительные типы для свойств датчиков (сенсоров)
+export interface YandexPropertyState {
+  instance: string;
+  value: boolean | number | string;
+  unit?: string;
+}
+
+export interface YandexPropertyParameters {
+  instance: string; // например, 'humidity', 'temperature'
+  unit?: string;    // например, 'percent', 'celsius'
+}
+
+export interface YandexProperty {
+  type: string;               // 'devices.properties.float', 'devices.properties.event' и т.д.
+  retrievable: boolean;
+  reportable: boolean;
+  parameters?: YandexPropertyParameters;
+  state?: YandexPropertyState;
+}
+
 export interface YandexDevice {
   id: string;
   name: string;
@@ -27,7 +47,7 @@ export interface YandexDevice {
   room?: string;
   groups?: string[];
   capabilities: YandexCapability[];
-  properties?: unknown[];
+  properties?: YandexProperty[];
 }
 
 export interface YandexRoom {
