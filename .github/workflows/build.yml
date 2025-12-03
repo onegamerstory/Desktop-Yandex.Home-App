@@ -56,8 +56,14 @@ jobs:
       # ----------------------------------------------------------------------
       - name: Build Electron App (Dist)
         run: npm run dist
-        # ИЗМЕНЕНИЕ: УДАЛЯЕМ GH_TOKEN, чтобы ПРЕДОТВРАТИТЬ АВТОМАТИЧЕСКУЮ ПУБЛИКАЦИЮ electron-builder.
-        # Теперь только softprops/action-gh-release будет создавать релиз.
+        # ВОССТАНОВЛЕНИЕ GH_TOKEN и добавление NO_PUBLISH=true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Запрещает electron-builder публиковать релиз, даже если видит тег.
+          # Это предотвращает конфликт с softprops/action-gh-release.
+          NO_PUBLISH: true
+          # Отключает автопоиск сертификатов для подписи, который не нужен в CI.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
         
       # ----------------------------------------------------------------------
       # Загрузка артефактов
@@ -76,7 +82,7 @@ jobs:
   # ----------------------------------------------------------------------
   release:
     name: Create GitHub Release
-    # Убедимся, что и этот шаг имеет права на запись, хотя, вероятно, достаточно прав в `build`
+    # Убедимся, что и этот шаг имеет права на запись
     permissions:
       contents: write
       packages: write
