@@ -166,73 +166,96 @@ function createWindow () {
     }
 }
 
-// Когда Electron готов
-app.whenReady().then(() => {
-    Menu.setApplicationMenu(null);
+// --- Single Instance Lock: предотвращаем запуск нескольких экземпляров ---
+const gotTheLock = app.requestSingleInstanceLock();
 
-    createWindow();
-    createTray(); // Создаем Tray
-    
-    ipcMain.handle('yandex-api:fetchUserInfo', async (event, token) => {
-        try {
-            return await yandexApi.fetchUserInfo(token);
-        } catch (error) {
-            throw new Error(error.message); 
+if (!gotTheLock) {
+    // Если другой экземпляр уже запущен, закрываем этот
+    app.quit();
+} else {
+    // Обработчик для случая, когда пользователь пытается запустить второй экземпляр
+    app.on('second-instance', () => {
+        // Если окно существует, показываем и фокусируем его
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
+            mainWindow.show();
+            mainWindow.focus();
+        } else {
+            // Если окна нет (например, оно было закрыто), создаем новое
+            createWindow();
         }
     });
 
-    ipcMain.handle('yandex-api:executeScenario', async (event, token, scenarioId) => {
-        try {
-            return await yandexApi.executeScenario(token, scenarioId);
-        } catch (error) {
-            throw new Error(error.message);
-        }
-    });
+    // Когда Electron готов
+    app.whenReady().then(() => {
+        Menu.setApplicationMenu(null);
 
-    ipcMain.handle('yandex-api:toggleDevice', async (event, token, deviceId, newState) => {
-        try {
-            return await yandexApi.toggleDevice(token, deviceId, newState);
-        } catch (error) {
-            throw new Error(error.message);
-        }
-    });
-
-	ipcMain.handle('secure:getToken', async () => {
-        // Читает токен из системного хранилища
-        return await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
-    });
-
-    ipcMain.handle('secure:setToken', async (event, token) => {
-        // Сохраняет токен в системное хранилище
-        await keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, token);
-    });
-
-    ipcMain.handle('secure:deleteToken', async () => {
-        // Удаляет токен из системного хранилища
-        await keytar.deletePassword(SERVICE_NAME, ACCOUNT_NAME);
-    });
-    
-    // --- 2. НОВЫЙ IPC-ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ ИЗБРАННЫХ ЭЛЕМЕНТОВ ---
-    ipcMain.on('tray:update-favorites', (event, favorites) => {
-        favoritesData = favorites;
-        updateTrayMenu(); // Обновляем меню при получении новых данных
-    });
-
-});
-
-// Закрыть приложение, когда закрыты все окна (кроме macOS)
-app.on('window-all-closed', () => {
-    // На macOS приложение обычно продолжает работать, даже если все окна закрыты
-    if (process.platform !== 'darwin') {
-        // В Windows и Linux выходим только если нет трея (иначе трей держит приложение)
-        if (!appTray) {
-            app.quit();
-        }
-    }
-});
-
-app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
-    }
-});
+        createTray(); // Создаем Tray
+        
+        ipcMain.handle('yandex-api:fetchUserInfo', async (event, token) => {
+            try {
+                return await yandexApi.fetchUserInfo(token);
+            } catch (error) {
+                throw new Error(error.message); 
+            }
+        });
+
+        ipcMain.handle('yandex-api:executeScenario', async (event, token, scenarioId) => {
+            try {
+                return await yandexApi.executeScenario(token, scenarioId);
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        });
+
+        ipcMain.handle('yandex-api:toggleDevice', async (event, token, deviceId, newState) => {
+            try {
+                return await yandexApi.toggleDevice(token, deviceId, newState);
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        });
+
+        ipcMain.handle('secure:getToken', async () => {
+            // Читает токен из системного хранилища
+            return await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);
+        });
+
+        ipcMain.handle('secure:setToken', async (event, token) => {
+            // Сохраняет токен в системное хранилище
+            await keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, token);
+        });
+
+        ipcMain.handle('secure:deleteToken', async () => {
+            // Удаляет токен из системного хранилища
+            await keytar.deletePassword(SERVICE_NAME, ACCOUNT_NAME);
+        });
+        
+        // --- 2. НОВЫЙ IPC-ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ ИЗБРАННЫХ ЭЛЕМЕНТОВ ---
+        ipcMain.on('tray:update-favorites', (event, favorites) => {
+            favoritesData = favorites;
+            updateTrayMenu(); // Обновляем меню при получении новых данных
+        });
+
+    });
+
+    // Закрыть приложение, когда закрыты все окна (кроме macOS)
+    app.on('window-all-closed', () => {
+        // На macOS приложение обычно продолжает работать, даже если все окна закрыты
+        if (process.platform !== 'darwin') {
+            // В Windows и Linux выходим только если нет трея (иначе трей держит приложение)
+            if (!appTray) {
+                app.quit();
+            }
+        }
+    });
+
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+    });
+}
