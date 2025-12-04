@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
 import { fetchUserInfo, executeScenario, toggleDevice } from './services/yandexIoT';
-// Обновляем импорт, чтобы включить Device
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
 import { formatSensorValue } from './constants';
 import { AlertCircle, X } from 'lucide-react';
@@ -429,9 +428,9 @@ useEffect(() => {
           onLogout={handleLogout} 
           onExecuteScenario={handleExecuteScenario} 
           onToggleDevice={handleToggleDevice}
-		  onRefresh={() => token && refreshDashboardData(token)}
+		      onRefresh={() => token && refreshDashboardData(token)}
           isRefreshing={isRefreshing}
-		  favoriteDeviceIds={favoriteDeviceIds}
+		      favoriteDeviceIds={favoriteDeviceIds}
           onToggleDeviceFavorite={handleToggleDeviceFavorite}
           favoriteScenarioIds={favoriteScenarioIds}
           onToggleScenarioFavorite={handleToggleScenarioFavorite}

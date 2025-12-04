@@ -1,14 +1,10 @@
-// service.ts или component.tsx (пример использования)
-
 import { YandexUserInfoResponse, YandexDevice, YandexRoom } from '../types';
 
 // Используем глобально объявленный 'api'
 const yandexApi = window.api;
 
 /**
- * Comprehensive mock data injection function
- * Adds 6 example devices + 8 new sensor types, all linked to the first household
- * Follows the exact Yandex API structure from the provided examples
+ * Инъекция мок-данных (6 примеров + 8 новых типов сенсоров)
  */
 const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUserInfoResponse => {
     if (!data.households || data.households.length === 0) {
@@ -598,8 +594,9 @@ export const fetchUserInfo = async (token: string): Promise<YandexUserInfoRespon
     try {
         // Вызываем функцию через IPC-мост, а не fetch напрямую!
         const userInfo = await yandexApi.fetchUserInfo(token) as YandexUserInfoResponse;
-        // Инъекция комплексных мок-данных (6 примеров + 8 новых типов сенсоров)
-        return injectComprehensiveMockDevices(userInfo);
+        // Инъекция мок-данных (6 примеров + 8 новых типов сенсоров)
+        //return injectComprehensiveMockDevices(userInfo);
+        return userInfo;
     } catch (error) {
         // Здесь вы получите ошибки, переданные из main.js
         console.error('Ошибка при загрузке данных через IPC:', error);

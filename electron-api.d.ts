@@ -1,6 +1,4 @@
 // electron-api.d.ts
-
-// Типы для ответа (импортируйте или определите их здесь)
 import { YandexUserInfoResponse, TrayMenuItem } from './types'; 
 
 export interface IYandexApi {

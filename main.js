@@ -29,8 +29,7 @@ const minimizeToTray = (event) => {
 
 // Функция для создания Tray
 function createTray() {
-    // ВНИМАНИЕ: Для продакшена нужно добавить иконку, например, в 'assets/icon.png'
-    // В режиме разработки используем заглушку.
+    // В режиме разработки используем заглушку
     const iconPath = path.join(__dirname, process.env.NODE_ENV === 'development' ? 'resources/icon.png' : 'resources/icon.png');
     // Используем системную иконку или заглушку (для кроссплатформенности)
     const fallbackIconPath = path.join(__dirname, 'electron.png'); // Предполагаем наличие electron.png в корне dist/
