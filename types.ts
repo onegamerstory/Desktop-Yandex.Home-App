@@ -25,9 +25,15 @@ export interface YandexPropertyState {
   unit?: string;
 }
 
+export interface YandexPropertyEvent {
+  value: string;
+  name: string;
+}
+
 export interface YandexPropertyParameters {
-  instance: string; // например, 'humidity', 'temperature'
-  unit?: string;    // например, 'percent', 'celsius'
+  instance: string; // например, 'humidity', 'temperature', 'open', 'motion'
+  unit?: string;    // например, 'unit.percent', 'unit.temperature.celsius', 'unit.cubic_meter'
+  events?: YandexPropertyEvent[]; // для event-типов свойств (например, 'devices.properties.event')
 }
 
 export interface YandexProperty {

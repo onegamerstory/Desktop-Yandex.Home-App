@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../types';
-import { getIconForDevice } from '../constants';
+import { getIconForDevice, localizeUnit } from '../constants';
 import { Loader2, Power, Star } from 'lucide-react';
 
 interface DeviceCardProps {
@@ -39,17 +39,43 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
   const rawSensorValue: unknown = sensorProperty?.state?.value;
   const rawSensorUnit: string | undefined =
     sensorProperty?.parameters?.unit ?? sensorProperty?.state?.unit;
+  const propertyType: string | undefined = sensorProperty?.type;
 
+  // Check if this is an event property that needs localization
+  const isEventProperty = propertyType === 'devices.properties.event';
+  
+  // Localize event status: find the Russian name from parameters.events array
+  let localizedEventValue: string | null = null;
+  if (isEventProperty && typeof rawSensorValue === 'string') {
+    const events = (sensorProperty as any)?.parameters?.events as Array<{ value: string; name: string }> | undefined;
+    if (events && Array.isArray(events)) {
+      const matchingEvent = events.find(event => event.value === rawSensorValue);
+      if (matchingEvent) {
+        localizedEventValue = matchingEvent.name;
+      }
+    }
+    // Fallback to original value if no matching event found
+    if (!localizedEventValue) {
+      localizedEventValue = rawSensorValue;
+    }
+  }
+
+  // Localize the unit code to a user-friendly display string (for float properties)
+  const localizedUnit = localizeUnit(rawSensorUnit);
+  
+  // Fallback to instance-based unit if no unit code is provided
   const resolvedUnit =
-    rawSensorUnit ||
-    (sensorInstance === 'humidity' ? '%' : sensorInstance === 'temperature' ? '°C' : '');
+    localizedUnit ||
+    (sensorInstance === 'humidity' ? ' %' : sensorInstance === 'temperature' ? ' °C' : '');
 
-  const formattedSensorValue =
-    typeof rawSensorValue === 'number'
-      ? `${rawSensorValue}${resolvedUnit ?? ''}`
-      : typeof rawSensorValue === 'string'
-      ? `${rawSensorValue}${resolvedUnit ?? ''}`
-      : null;
+  // Format sensor value: use localized event name for events, or formatted number/string with unit for floats
+  const formattedSensorValue = isEventProperty && localizedEventValue
+    ? localizedEventValue
+    : typeof rawSensorValue === 'number'
+    ? `${rawSensorValue}${resolvedUnit ?? ''}`
+    : typeof rawSensorValue === 'string'
+    ? `${rawSensorValue}${resolvedUnit ?? ''}`
+    : null;
 
   const handleClick = async () => {
     if (!isToggleable || loading) return;

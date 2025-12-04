@@ -20,7 +20,8 @@ import {
   AlarmSmoke,
   AirVent,
   Sunset,
-  Speaker
+  Speaker,
+  ReceiptText
 } from 'lucide-react';
 
 // Mapping Yandex icon strings to Lucide React Components
@@ -76,6 +77,38 @@ export const getIconForDevice = (type: string): React.ReactNode => {
     if (t.includes('sensor')) return <AlarmSmoke className={className} />;
     if (t.includes('thermostat')) return <AirVent className={className} />;
     if (t.includes('speaker')) return <Speaker className={className} />;
+    if (t.includes('smart_meter')) return <ReceiptText className={className} />;
     
     return <Zap className={className} />;
+}
+
+/**
+ * Unit localization map for Yandex Smart Home API
+ * Maps technical unit codes to user-friendly display strings
+ */
+export const UNIT_LOCALIZATION_MAP: Record<string, string> = {
+    'unit.cubic_meter': ' м³',
+    'unit.kilowatt_hour': ' кВт/ч',
+    'unit.temperature.celsius': ' °C',
+    'unit.illumination.lux': ' лк',
+    'unit.percent': ' %',
+};
+
+/**
+ * Localizes a technical unit code to a user-friendly display string
+ * @param unitCode - The technical unit code (e.g., 'unit.cubic_meter')
+ * @returns The localized display string (e.g., 'м³') or the original code if not found
+ */
+export const localizeUnit = (unitCode: string | undefined): string => {
+    if (!unitCode) {
+        return '';
+    }
+    
+    // Check if the unit code exists in the localization map
+    if (UNIT_LOCALIZATION_MAP[unitCode]) {
+        return UNIT_LOCALIZATION_MAP[unitCode];
+    }
+    
+    // Return empty string for unknown units (or return original code if preferred)
+    return '';
 }
