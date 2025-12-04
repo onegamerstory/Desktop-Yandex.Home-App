@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { fetchUserInfo, executeScenario, toggleDevice } from './services/yandexIoT';
 // Обновляем импорт, чтобы включить Device
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
+import { formatSensorValue } from './constants';
 import { AlertCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -282,29 +283,42 @@ function App() {
   
 // --- 2. Вспомогательная функция для подготовки данных для трея ---
 const getTrayMenuItems = useCallback((
-    data: YandexUserInfoResponse | null,
-    favDevices: string[],
-    favScenarios: string[]
+    data: YandexUserInfoResponse | null,
+    favDevices: string[],
+    favScenarios: string[]
 ): TrayMenuItem[] => {
-    if (!data) return [];
+    if (!data) return [];
 
-    const deviceMap = new Map(data.devices.map(d => [d.id, d]));
-    const scenarioMap = new Map(data.scenarios.map(s => [s.id, s]));
-    
-    // 1. Избранные устройства
-    const favDeviceItems: TrayMenuItem[] = favDevices
-        .map(id => deviceMap.get(id))
-        .filter((d): d is YandexDevice => !!d) 
-        .map(device => {
-            const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
-            return {
-                id: device.id,
-                name: device.name,
-                type: 'device' as TrayItemType,
-                isToggleable: !!onOffCapability,
-                isOn: onOffCapability?.state?.value === true,
-            };
-        });
+    const deviceMap = new Map(data.devices.map(d => [d.id, d]));
+    const scenarioMap = new Map(data.scenarios.map(s => [s.id, s]));
+    
+    // 1. Избранные устройства
+    const favDeviceItems: TrayMenuItem[] = favDevices
+        .map(id => deviceMap.get(id))
+        .filter((d): d is YandexDevice => !!d) 
+        .map(device => {
+            const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
+            const isToggleable = !!onOffCapability;
+            
+            // Check if this is a sensor or smart meter device that should show sensor value
+            const deviceType = device.type.toLowerCase();
+            const isSensorOrMeter = deviceType.includes('sensor') || deviceType.includes('smart_meter');
+            
+            // Calculate sensor value for sensor/smart_meter devices
+            let sensorValue: string | null = null;
+            if (isSensorOrMeter && !isToggleable) {
+                sensorValue = formatSensorValue(device);
+            }
+            
+            return {
+                id: device.id,
+                name: device.name,
+                type: 'device' as TrayItemType,
+                isToggleable: isToggleable,
+                isOn: onOffCapability?.state?.value === true,
+                sensorValue: sensorValue,
+            };
+        });
 
     // 2. Избранные сценарии
     const favScenarioItems: TrayMenuItem[] = favScenarios

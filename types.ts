@@ -99,5 +99,7 @@ export interface TrayMenuItem {
     type: TrayItemType;
     // Для устройств
     isToggleable?: boolean; 
-    isOn?: boolean; 
+    isOn?: boolean;
+    // Для сенсоров и счётчиков - отформатированное значение (например, "24.5 °C", "закрыто", "3758.142 м³")
+    sensorValue?: string | null;
 }
