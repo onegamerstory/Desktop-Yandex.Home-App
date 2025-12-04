@@ -39,9 +39,12 @@ function App() {
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Состояние избранного, загруженное из LocalStorage
-  const [favoriteDeviceIds, setFavoriteDeviceIds] = useState<string[]>(getFavorites('favoriteDeviceIds'));
-  const [favoriteScenarioIds, setFavoriteScenarioIds] = useState<string[]>(getFavorites('favoriteScenarioIds'));
+  // Состояние избранного, загруженное из LocalStorage
+  const [favoriteDeviceIds, setFavoriteDeviceIds] = useState<string[]>(getFavorites('favoriteDeviceIds'));
+  const [favoriteScenarioIds, setFavoriteScenarioIds] = useState<string[]>(getFavorites('favoriteScenarioIds'));
+  
+  // Состояние автозапуска
+  const [isAutostartEnabled, setIsAutostartEnabled] = useState<boolean>(false);
 
 	// --- Уведомления ---
 	const showNotification = useCallback((message: string, type: 'error' | 'success' = 'error') => {
@@ -261,13 +264,21 @@ function App() {
 		});
 	}, []);
 
-  // --- 1. useEffect: Проверка токена при запуске ---
-  useEffect(() => {
-    	const checkToken = async () => {
+  // --- 1. useEffect: Проверка токена при запуске ---
+  useEffect(() => {
+    	const checkToken = async () => {
 			setAppState(AppState.LOADING);
 			
 			// Используем IPC для безопасного извлечения токена
-			const storedToken = await yandexApi.getSecureToken(); 
+			const storedToken = await yandexApi.getSecureToken(); 
+			
+			// Загружаем состояние автозапуска
+			try {
+				const autostartEnabled = await yandexApi.isAutostartEnabled();
+				setIsAutostartEnabled(autostartEnabled);
+			} catch (error) {
+				console.error('Ошибка при загрузке состояния автозапуска:', error);
+			}
 			
 			if (storedToken) {
 				setToken(storedToken);
@@ -277,7 +288,25 @@ function App() {
 			}
 		};
 		checkToken();
-  }, [loadData]); // Зависимость от loadData
+  }, [loadData]); // Зависимость от loadData
+
+	// Обработчик переключения автозапуска
+	const handleToggleAutostart = useCallback(async () => {
+		try {
+			const newState = !isAutostartEnabled;
+			await yandexApi.setAutostartEnabled(newState);
+			setIsAutostartEnabled(newState);
+			showNotification(
+				newState 
+					? 'Автозапуск включен. Приложение будет запускаться вместе с системой.' 
+					: 'Автозапуск выключен. Приложение будет запускаться только вручную.',
+				'success'
+			);
+		} catch (error) {
+			console.error('Ошибка при изменении автозапуска:', error);
+			showNotification('Не удалось изменить настройки автозапуска', 'error');
+		}
+	}, [isAutostartEnabled, showNotification]);
 
   
 // --- 2. Вспомогательная функция для подготовки данных для трея ---
@@ -434,6 +463,8 @@ useEffect(() => {
           onToggleDeviceFavorite={handleToggleDeviceFavorite}
           favoriteScenarioIds={favoriteScenarioIds}
           onToggleScenarioFavorite={handleToggleScenarioFavorite}
+          isAutostartEnabled={isAutostartEnabled}
+          onToggleAutostart={handleToggleAutostart}
         />
         <NotificationToast />
       </ThemeProvider>

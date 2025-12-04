@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { YandexUserInfoResponse, YandexScenario, YandexHousehold } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
-import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight } from 'lucide-react';
+import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
@@ -21,6 +21,8 @@ interface DashboardProps {
   onToggleDeviceFavorite: (id: string) => void;
   favoriteScenarioIds: string[];
   onToggleScenarioFavorite: (id: string) => void;
+  isAutostartEnabled: boolean;
+  onToggleAutostart: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -37,6 +39,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onToggleDeviceFavorite,
   favoriteScenarioIds,
   onToggleScenarioFavorite,
+  isAutostartEnabled,
+  onToggleAutostart,
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -197,6 +201,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                 <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Онлайн</span>
              </div>
+             <button
+                onClick={onToggleAutostart}
+                className={`p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors ${
+                  isAutostartEnabled 
+                    ? 'text-purple-600 dark:text-primary bg-purple-50 dark:bg-primary/20' 
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title={isAutostartEnabled ? 'Автозапуск включен. Нажмите, чтобы выключить' : 'Автозапуск выключен. Нажмите, чтобы включить'}
+            >
+                <Power className={`w-5 h-5`} />
+            </button>
              <button
                 onClick={toggleTheme}
                 className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"

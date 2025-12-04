@@ -9,6 +9,10 @@ export interface IYandexApi {
     setSecureToken: (token: string) => Promise<void>;
     deleteSecureToken: () => Promise<void>;
 
+    // Auto-launch methods
+    isAutostartEnabled: () => Promise<boolean>;
+    setAutostartEnabled: (enabled: boolean) => Promise<boolean>;
+
     sendFavoritesToTray: (favorites: TrayMenuItem[]) => void;
     onTrayCommand: (callback: (command: string, id: string, currentState?: boolean) => void) => void;
     removeTrayCommandListener: () => void;

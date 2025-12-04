@@ -13,7 +13,11 @@ contextBridge.exposeInMainWorld('api', {
     // Сохраняет токен в Keytar
     setSecureToken: (token) => ipcRenderer.invoke('secure:setToken', token),
     // Удаляет токен из Keytar
-    deleteSecureToken: () => ipcRenderer.invoke('secure:deleteToken'), 
+    deleteSecureToken: () => ipcRenderer.invoke('secure:deleteToken'),
+    
+    // Auto-launch methods
+    isAutostartEnabled: () => ipcRenderer.invoke('autostart:isEnabled'),
+    setAutostartEnabled: (enabled) => ipcRenderer.invoke('autostart:setEnabled', enabled), 
 	
 	 // --- НОВЫЙ IPC ДЛЯ ТРЕЯ ---
     // Отправка данных избранного из рендерера в главный процесс

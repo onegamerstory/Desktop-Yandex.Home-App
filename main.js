@@ -234,6 +234,20 @@ if (!gotTheLock) {
             await keytar.deletePassword(SERVICE_NAME, ACCOUNT_NAME);
         });
         
+        // --- Auto-launch handlers ---
+        ipcMain.handle('autostart:isEnabled', async () => {
+            const loginItemSettings = app.getLoginItemSettings();
+            return loginItemSettings.openAtLogin;
+        });
+
+        ipcMain.handle('autostart:setEnabled', async (event, enabled) => {
+            app.setLoginItemSettings({
+                openAtLogin: enabled,
+                openAsHidden: false, // Можно изменить на true, если нужно запускать скрыто
+            });
+            return enabled;
+        });
+        
         // --- 2. НОВЫЙ IPC-ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ ИЗБРАННЫХ ЭЛЕМЕНТОВ ---
         ipcMain.on('tray:update-favorites', (event, favorites) => {
             favoritesData = favorites;
