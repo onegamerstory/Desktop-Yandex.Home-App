@@ -28,7 +28,7 @@
   },
   
 
-  "author": "Your Name <youremail@example.com>",
+  "author": "История Одного Геймера <gamecuts0412@gmail.com>",
   "description": "Yandex Smart Home Control Application",
   
   "build": {
@@ -86,7 +86,7 @@
       "target": ["AppImage", "deb", "rpm"],
       "category": "Utility",
       "icon": "resources/icon.png",
-      "maintainer": "Your Name <youremail@example.com>",
+      "maintainer": "История Одного Геймера <gamecuts0412@gmail.com>",
       "description": "Yandex Smart Home Control Application",
       "executableName": "yandex-smart-home-control"
     }
