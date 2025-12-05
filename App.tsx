@@ -74,13 +74,62 @@ function App() {
 
 	// --- ФУНКЦИИ ДЕЙСТВИЙ ---
 
+	// Функция для проверки изменений в состоянии устройств
+	const hasDeviceStateChanges = useCallback((oldData: YandexUserInfoResponse | null, newData: YandexUserInfoResponse): boolean => {
+		if (!oldData) return true;
+		
+		// Создаем карты устройств для быстрого сравнения
+		const oldDevicesMap = new Map(oldData.devices.map(d => [d.id, d]));
+		const newDevicesMap = new Map(newData.devices.map(d => [d.id, d]));
+		
+		// Проверяем изменения в capabilities (состояния устройств)
+		for (const [deviceId, newDevice] of newDevicesMap) {
+			const oldDevice = oldDevicesMap.get(deviceId);
+			if (!oldDevice) continue;
+			
+			// Сравниваем состояния capabilities
+			const oldCapabilities = oldDevice.capabilities || [];
+			const newCapabilities = newDevice.capabilities || [];
+			
+			if (oldCapabilities.length !== newCapabilities.length) return true;
+			
+			for (let i = 0; i < oldCapabilities.length; i++) {
+				const oldCap = oldCapabilities[i];
+				const newCap = newCapabilities[i];
+				if (oldCap.type !== newCap.type) return true;
+				if (JSON.stringify(oldCap.state) !== JSON.stringify(newCap.state)) return true;
+			}
+			
+			// Сравниваем состояния properties (для сенсоров)
+			const oldProperties = oldDevice.properties || [];
+			const newProperties = newDevice.properties || [];
+			
+			if (oldProperties.length !== newProperties.length) return true;
+			
+			for (let i = 0; i < oldProperties.length; i++) {
+				const oldProp = oldProperties[i] as any;
+				const newProp = newProperties[i] as any;
+				if (oldProp.type !== newProp.type) return true;
+				if (JSON.stringify(oldProp.state) !== JSON.stringify(newProp.state)) return true;
+			}
+		}
+		
+		return false;
+	}, []);
+
 	// Функция для тихого фонового обновления данных (не сбрасывает scroll)
-  const refreshDashboardData = useCallback(async (apiToken: string) => {
-		setIsRefreshing(true);
+  const refreshDashboardData = useCallback(async (apiToken: string, silent: boolean = false) => {
+		if (!silent) {
+			setIsRefreshing(true);
+		}
     		try {
-      		const data = await fetchUserInfo(apiToken);
-     		const sortedData = stableSortData(data);
-      		setUserData(sortedData);
+     		const data = await fetchUserInfo(apiToken);
+     		const sortedData = stableSortData(data);
+     		
+     		// Проверяем, есть ли изменения в состоянии устройств
+     		const hasChanges = hasDeviceStateChanges(userData, sortedData);
+     		
+     		setUserData(sortedData);
             const households = sortedData.households || [];
             setActiveHouseholdId(prev => {
               if (prev && households.some(h => h.id === prev)) {
@@ -88,23 +137,37 @@ function App() {
               }
               return households.length > 0 ? households[0].id : null;
             });
-	  		showNotification('Данные успешно обновлены.', 'success');
-      		// Важно: не меняем appState, чтобы оставаться на Dashboard и не терять скролл
-    	} catch (err: unknown) {
-      		// Если при фоновом обновлении получаем ошибку авторизации, выходим из системы
-      		if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
-          		await yandexApi.deleteSecureToken(); 
-          		setToken(null);
-          		setUserData(null);
-          		setAppState(AppState.AUTH);
-          		showNotification('Сессия истекла. Пожалуйста, введите токен заново.', 'error');
-      		} else {
-        		showNotification('Ошибка обновления данных.', 'error');
-      		}
-    	} finally {
-        		setIsRefreshing(false); 
-    	}
-  	}, [showNotification, stableSortData]);
+            
+            // Показываем уведомление только при ручном обновлении
+            if (!silent) {
+            	showNotification('Данные успешно обновлены.', 'success');
+            } else if (hasChanges) {
+            	// Тихая синхронизация: обновляем без уведомления, но данные обновятся в UI
+            	console.log('Device states synchronized from external changes');
+            }
+     		// Важно: не меняем appState, чтобы оставаться на Dashboard и не терять скролл
+    	} catch (err: unknown) {
+     		// Если при фоновом обновлении получаем ошибку авторизации, выходим из системы
+     		if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
+         		await yandexApi.deleteSecureToken(); 
+         		setToken(null);
+         		setUserData(null);
+         		setAppState(AppState.AUTH);
+         		showNotification('Сессия истекла. Пожалуйста, введите токен заново.', 'error');
+     		} else {
+     			// При тихой синхронизации не показываем ошибки (чтобы не мешать пользователю)
+     			if (!silent) {
+     				showNotification('Ошибка обновления данных.', 'error');
+     			} else {
+     				console.error('Silent sync error:', err);
+     			}
+     		}
+    	} finally {
+    		if (!silent) {
+    			setIsRefreshing(false);
+    		}
+    	}
+ 	}, [showNotification, stableSortData, userData, hasDeviceStateChanges]);
   
 	// Функция для инициализации и авторизации (меняет appState)
 	const loadData = useCallback(async (apiToken: string) => {
@@ -411,8 +474,30 @@ useEffect(() => {
     return () => {
         yandexApi.removeTrayCommandListener();
     };
-}, [handleToggleDevice, handleExecuteScenario, token]);  // Зависимости корректны
-  
+	}, [handleToggleDevice, handleExecuteScenario, token]);  // Зависимости корректны
+
+	// --- 5. useEffect: Автоматическая синхронизация (polling) ---
+	useEffect(() => {
+		// Polling только когда пользователь на дашборде и есть токен
+		if (appState !== AppState.DASHBOARD || !token) {
+			return;
+		}
+
+		// Интервал синхронизации: 15 секунд
+		const POLLING_INTERVAL = 15000; // 15 секунд
+
+		const pollingInterval = setInterval(() => {
+			// Тихая синхронизация без уведомлений и индикатора загрузки
+			refreshDashboardData(token, true).catch(err => {
+				console.error('Polling sync error:', err);
+			});
+		}, POLLING_INTERVAL);
+
+		// Очистка интервала при размонтировании или изменении зависимостей
+		return () => {
+			clearInterval(pollingInterval);
+		};
+	}, [appState, token, refreshDashboardData]);
 
   // Global Notification Toast Component
   const NotificationToast = () => {
