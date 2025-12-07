@@ -190,7 +190,7 @@ if (!gotTheLock) {
 
     // Когда Electron готов
     app.whenReady().then(() => {
-        Menu.setApplicationMenu(null);
+        //Menu.setApplicationMenu(null);
 
         createWindow();
         createTray(); // Создаем Tray
