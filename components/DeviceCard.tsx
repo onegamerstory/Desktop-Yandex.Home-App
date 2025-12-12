@@ -19,7 +19,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
   // If no on_off capability, device might be a sensor or unsupported for simple toggle
   const isToggleable = !!onOffCapability;
   // Если у девайса явно есть состояние и onOffCapability ИЛИ это умная колонка
-  const isOn = onOffCapability?.state?.value === true || device.type.toLowerCase().includes('smart_speaker');
+  const isOn = onOffCapability?.state?.value === true || 
+                device.type.toLowerCase().includes('smart_speaker') || 
+                device.type.toLowerCase().includes('hub') ||
+                device.type.toLowerCase().includes('other');
 
   // Sensor detection: ищем свойство с текущим значением
   const sensorProperty = (device.properties ?? []).find(prop => {
