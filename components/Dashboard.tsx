@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { YandexUserInfoResponse, YandexScenario, YandexHousehold } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
-import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, Power } from 'lucide-react';
+import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
@@ -44,6 +44,66 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { theme, toggleTheme } = useTheme();
+
+  // Состояние сворачивания секций (загружаем из localStorage)
+  const loadCollapseState = (key: string, defaultValue: boolean): boolean => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored !== null ? JSON.parse(stored) : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  };
+
+  const saveCollapseState = (key: string, value: boolean): void => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error(`Error saving collapse state for ${key}:`, e);
+    }
+  };
+
+  const [isScenariosCollapsed, setIsScenariosCollapsed] = useState(() => 
+    loadCollapseState('dashboard:scenariosCollapsed', false)
+  );
+  const [isDevicesCollapsed, setIsDevicesCollapsed] = useState(() => 
+    loadCollapseState('dashboard:devicesCollapsed', false)
+  );
+  const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('dashboard:collapsedRooms');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  });
+
+  const toggleScenarios = () => {
+    const newValue = !isScenariosCollapsed;
+    setIsScenariosCollapsed(newValue);
+    saveCollapseState('dashboard:scenariosCollapsed', newValue);
+  };
+
+  const toggleDevices = () => {
+    const newValue = !isDevicesCollapsed;
+    setIsDevicesCollapsed(newValue);
+    saveCollapseState('dashboard:devicesCollapsed', newValue);
+  };
+
+  const toggleRoom = (roomId: string) => {
+    const newCollapsedRooms = new Set(collapsedRooms);
+    if (newCollapsedRooms.has(roomId)) {
+      newCollapsedRooms.delete(roomId);
+    } else {
+      newCollapsedRooms.add(roomId);
+    }
+    setCollapsedRooms(newCollapsedRooms);
+    try {
+      localStorage.setItem('dashboard:collapsedRooms', JSON.stringify(Array.from(newCollapsedRooms)));
+    } catch (e) {
+      console.error('Error saving collapsed rooms:', e);
+    }
+  };
 
   // Текущий дом и индикатор наличия нескольких домов
   const currentHousehold = useMemo(() => {
@@ -316,100 +376,142 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Scenarios Section */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Сценарии</h2>
+            <button
+              onClick={toggleScenarios}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              {isScenariosCollapsed ? (
+                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              )}
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Сценарии</h2>
+            </button>
             <span className="text-sm text-slate-600 dark:text-secondary bg-white dark:bg-surface px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">
               {activeScenarios.length} активных
             </span>
           </div>
 
-          {activeScenarios.length === 0 ? (
-             <div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl bg-gray-50 dark:bg-surface/30">
-                <p className="text-slate-600 dark:text-slate-400">У вас нет активных сценариев.</p>
-             </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {activeScenarios.map((scenario: YandexScenario) => (
-                <ScenarioCard 
-                  key={scenario.id} 
-                  scenario={scenario} 
-                  onExecute={onExecuteScenario} 
-				  isFavorite={favoriteScenarioIds.includes(scenario.id)}
-                  onToggleFavorite={onToggleScenarioFavorite}
-                />
-              ))}
-            </div>
+          {!isScenariosCollapsed && (
+            <>
+              {activeScenarios.length === 0 ? (
+                 <div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl bg-gray-50 dark:bg-surface/30">
+                    <p className="text-slate-600 dark:text-slate-400">У вас нет активных сценариев.</p>
+                 </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {activeScenarios.map((scenario: YandexScenario) => (
+                    <ScenarioCard 
+                      key={scenario.id} 
+                      scenario={scenario} 
+                      onExecute={onExecuteScenario} 
+                      isFavorite={favoriteScenarioIds.includes(scenario.id)}
+                      onToggleFavorite={onToggleScenarioFavorite}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
 
         {/* Devices Section */}
         <section>
-            <h2 className="text-2xl font-bold mb-8 text-slate-900 dark:text-slate-100">Устройства</h2>
-            
-            {roomsForHome.length === 0 && devicesForHome.length > 0 && (
-                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {devicesForHome.map(device => (
-                        <DeviceCard 
-						key={device.id} 
-						device={device} 
-						onToggle={onToggleDevice} 
-						isFavorite={favoriteDeviceIds.includes(device.id)} 
-                        onToggleFavorite={onToggleDeviceFavorite}
-						/>
-                    ))}
-                 </div>
-            )}
-
-            <div className="space-y-8">
-                {roomsForHome.map(room => {
-                    const roomDevices = devicesForHome.filter(d => room.devices.includes(d.id));
-                    if (roomDevices.length === 0) return null;
-                    
-                    return (
-                        <div key={room.id} className="bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
-                            <h3 className="font-semibold text-lg mb-4 text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-primary"></span>
-                                {room.name}
-                            </h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {roomDevices.map(dev => (
-                                    <DeviceCard 
-									key={dev.id} 
-									device={dev} 
-									onToggle={onToggleDevice} 
-									isFavorite={favoriteDeviceIds.includes(dev.id)} 
-									onToggleFavorite={onToggleDeviceFavorite}
-									/>
-                                ))}
-                            </div>
-                        </div>
-                    )
-                })}
+            <div className="flex items-center gap-2 mb-8">
+              <button
+                onClick={toggleDevices}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                {isDevicesCollapsed ? (
+                  <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                )}
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Устройства</h2>
+              </button>
             </div>
             
-            {/* Unassigned Devices */}
-             {(() => {
-                 const assignedIds = new Set(roomsForHome.flatMap(r => r.devices));
-                 const unassignedDevices = devicesForHome.filter(d => !assignedIds.has(d.id));
-                 if (unassignedDevices.length === 0) return null;
-
-                 return (
-                     <div className="mt-8 bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
-                        <h3 className="font-semibold text-lg mb-4 text-slate-700 dark:text-slate-300">Без комнаты</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {unassignedDevices.map(dev => (
-                                <DeviceCard 
-								key={dev.id} 
-								device={dev} 
-								onToggle={onToggleDevice} 
-								isFavorite={favoriteDeviceIds.includes(dev.id)} 
-								onToggleFavorite={onToggleDeviceFavorite}
-								/>
-                            ))}
-                        </div>
+            {!isDevicesCollapsed && (
+              <>
+                {roomsForHome.length === 0 && devicesForHome.length > 0 && (
+                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {devicesForHome.map(device => (
+                            <DeviceCard 
+                            key={device.id} 
+                            device={device} 
+                            onToggle={onToggleDevice} 
+                            isFavorite={favoriteDeviceIds.includes(device.id)} 
+                            onToggleFavorite={onToggleDeviceFavorite}
+                            />
+                        ))}
                      </div>
-                 );
-             })()}
+                )}
 
+                <div className="space-y-8">
+                    {roomsForHome.map(room => {
+                        const roomDevices = devicesForHome.filter(d => room.devices.includes(d.id));
+                        if (roomDevices.length === 0) return null;
+                        const isRoomCollapsed = collapsedRooms.has(room.id);
+                        
+                        return (
+                            <div key={room.id} className="bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
+                                <button
+                                  onClick={() => toggleRoom(room.id)}
+                                  className="w-full flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
+                                >
+                                  {isRoomCollapsed ? (
+                                    <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                                  )}
+                                  <h3 className="font-semibold text-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-primary"></span>
+                                      {room.name}
+                                  </h3>
+                                </button>
+                                {!isRoomCollapsed && (
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                      {roomDevices.map(dev => (
+                                          <DeviceCard 
+                                          key={dev.id} 
+                                          device={dev} 
+                                          onToggle={onToggleDevice} 
+                                          isFavorite={favoriteDeviceIds.includes(dev.id)} 
+                                          onToggleFavorite={onToggleDeviceFavorite}
+                                          />
+                                      ))}
+                                  </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+                
+                {/* Unassigned Devices */}
+                 {(() => {
+                     const assignedIds = new Set(roomsForHome.flatMap(r => r.devices));
+                     const unassignedDevices = devicesForHome.filter(d => !assignedIds.has(d.id));
+                     if (unassignedDevices.length === 0) return null;
+
+                     return (
+                         <div className="mt-8 bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
+                            <h3 className="font-semibold text-lg mb-4 text-slate-700 dark:text-slate-300">Без комнаты</h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                {unassignedDevices.map(dev => (
+                                    <DeviceCard 
+                                    key={dev.id} 
+                                    device={dev} 
+                                    onToggle={onToggleDevice} 
+                                    isFavorite={favoriteDeviceIds.includes(dev.id)} 
+                                    onToggleFavorite={onToggleDeviceFavorite}
+                                    />
+                                ))}
+                            </div>
+                         </div>
+                     );
+                 })()}
+              </>
+            )}
         </section>
 
       </main>
