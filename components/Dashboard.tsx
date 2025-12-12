@@ -107,6 +107,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }
     });
 
+    // Дополняем карту устройствами, которые есть только в списке комнат
+    data.rooms.forEach(room => {
+      const householdId = room.household_id;
+      room.devices.forEach(deviceId => {
+        if (!map.has(deviceId)) {
+          map.set(deviceId, householdId);
+        }
+      });
+    });
+
     return map;
   }, [data.devices, data.rooms]);
 
