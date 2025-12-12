@@ -483,8 +483,8 @@ useEffect(() => {
 			return;
 		}
 
-		// Интервал синхронизации: 15 секунд
-		const POLLING_INTERVAL = 15000; // 15 секунд
+		// Интервал синхронизации: 30 секунд
+		const POLLING_INTERVAL = 30000; // 30 секунд
 
 		const pollingInterval = setInterval(() => {
 			// Тихая синхронизация без уведомлений и индикатора загрузки

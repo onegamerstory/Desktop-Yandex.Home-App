@@ -21,7 +21,8 @@ import {
   AirVent,
   Sunset,
   Speaker,
-  ReceiptText
+  ReceiptText,
+  GamepadDirectional
 } from 'lucide-react';
 
 // Mapping Yandex icon strings to Lucide React Components
@@ -78,6 +79,7 @@ export const getIconForDevice = (type: string): React.ReactNode => {
     if (t.includes('thermostat')) return <AirVent className={className} />;
     if (t.includes('speaker')) return <Speaker className={className} />;
     if (t.includes('smart_meter')) return <ReceiptText className={className} />;
+    if (t.includes('hub')) return <GamepadDirectional className={className} />;
     
     return <Zap className={className} />;
 }

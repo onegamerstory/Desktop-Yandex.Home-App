@@ -594,9 +594,44 @@ export const fetchUserInfo = async (token: string): Promise<YandexUserInfoRespon
     try {
         // Вызываем функцию через IPC-мост, а не fetch напрямую!
         const userInfo = await yandexApi.fetchUserInfo(token) as YandexUserInfoResponse;
-        // Инъекция мок-данных (6 примеров + 8 новых типов сенсоров)
-        //return injectComprehensiveMockDevices(userInfo);
-        return userInfo;
+
+        // Собираем устройства, которые есть только в rooms.devices[], но отсутствуют в devices[]
+        const knownDeviceIds = new Set(userInfo.devices.map(d => d.id));
+        const roomDeviceIds = new Set(userInfo.rooms.flatMap(r => r.devices));
+        const missingDeviceIds = Array.from(roomDeviceIds).filter(id => !knownDeviceIds.has(id));
+
+        if (missingDeviceIds.length === 0) {
+            return userInfo;
+        }
+
+        const fetchedDevices: YandexDevice[] = [];
+
+        for (const deviceId of missingDeviceIds) {
+            try {
+                const device = await yandexApi.fetchDevice(token, deviceId) as YandexDevice;
+
+                // Проставляем room/household, если API их не вернул
+                const room = userInfo.rooms.find(r => r.devices.includes(deviceId));
+                if (room) {
+                    if (!device.room) {
+                        device.room = room.id;
+                    }
+                    const anyDevice = device as any;
+                    if (!anyDevice.household_id) {
+                        anyDevice.household_id = room.household_id;
+                    }
+                }
+
+                fetchedDevices.push(device);
+            } catch (error) {
+                console.warn(`Не удалось загрузить устройство ${deviceId}:`, error);
+            }
+        }
+
+        return {
+            ...userInfo,
+            devices: [...userInfo.devices, ...fetchedDevices],
+        };
     } catch (error) {
         // Здесь вы получите ошибки, переданные из main.js
         console.error('Ошибка при загрузке данных через IPC:', error);

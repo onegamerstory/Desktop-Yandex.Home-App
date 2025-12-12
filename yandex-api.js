@@ -37,6 +37,31 @@ export const fetchUserInfo = async (token) => {
     }
 };
 
+// 1.1 Получение информации об устройстве по ID
+export const fetchDevice = async (token, deviceId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/devices/${deviceId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Ошибка авторизации. Проверьте ваш токен.');
+            }
+            throw new Error(`Не удалось получить устройство ${deviceId}: ${response.status} ${response.statusText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        handleFetchError(error);
+        throw error;
+    }
+};
+
 // 2. Выполнение сценария
 export const executeScenario = async (token, scenarioId) => {
     try {

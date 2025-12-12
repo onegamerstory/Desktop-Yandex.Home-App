@@ -219,6 +219,14 @@ if (!gotTheLock) {
             }
         });
 
+        ipcMain.handle('yandex-api:fetchDevice', async (event, token, deviceId) => {
+            try {
+                return await yandexApi.fetchDevice(token, deviceId);
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        });
+
         ipcMain.handle('secure:getToken', async () => {
             // Читает токен из системного хранилища
             return await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME);

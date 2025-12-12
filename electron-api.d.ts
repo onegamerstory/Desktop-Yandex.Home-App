@@ -1,8 +1,9 @@
 // electron-api.d.ts
-import { YandexUserInfoResponse, TrayMenuItem } from './types'; 
+import { YandexUserInfoResponse, YandexDevice, TrayMenuItem } from './types'; 
 
 export interface IYandexApi {
     fetchUserInfo: (token: string) => Promise<YandexUserInfoResponse>;
+    fetchDevice: (token: string, deviceId: string) => Promise<YandexDevice>; 
     executeScenario: (token: string, scenarioId: string) => Promise<void>;
     toggleDevice: (token: string, deviceId: string, newState: boolean) => Promise<void>;
 	  getSecureToken: () => Promise<string | null>;
