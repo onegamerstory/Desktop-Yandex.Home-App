@@ -59,7 +59,15 @@
 
 `sudo xattr -d com.apple.quarantine /Applications/Yandex\ Smart\ Home\ Control.app`
 
+### Информация для Linux
+
+Если вы используете файл .AppImage для установки программы и получаете ошибку, в которой упоминается sandbox, тогда для запуска нужно добавить ключик `--no-sandbox`:
+
+`./Yandex.Smart.Home.Control.Setup.vX.Y.Z.AppImage --no-sandbox`
+
+
 ### Информация для Windows
+
 Приложение автоматически установится в директорию пользователя: 
 `C:\Users\<user>\AppData\Local\Programs\`
 
