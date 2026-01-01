@@ -99,12 +99,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(() => 
     loadCollapsedRooms(activeHouseholdId)
   );
+  const [isUnassignedDevicesCollapsed, setIsUnassignedDevicesCollapsed] = useState(() => 
+    loadCollapseState('dashboard:unassignedDevicesCollapsed', activeHouseholdId, false)
+  );
 
   // Обновляем состояние вкладок при переключении дома
   useEffect(() => {
     setIsScenariosCollapsed(loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false));
     setIsDevicesCollapsed(loadCollapseState('dashboard:devicesCollapsed', activeHouseholdId, false));
     setCollapsedRooms(loadCollapsedRooms(activeHouseholdId));
+    setIsUnassignedDevicesCollapsed(loadCollapseState('dashboard:unassignedDevicesCollapsed', activeHouseholdId, false));
   }, [activeHouseholdId]);
 
   const toggleScenarios = () => {
@@ -128,6 +132,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
     setCollapsedRooms(newCollapsedRooms);
     saveCollapsedRooms(activeHouseholdId, newCollapsedRooms);
+  };
+
+  const toggleUnassignedDevices = () => {
+    const newValue = !isUnassignedDevicesCollapsed;
+    setIsUnassignedDevicesCollapsed(newValue);
+    saveCollapseState('dashboard:unassignedDevicesCollapsed', activeHouseholdId, newValue);
   };
 
   // Текущий дом и индикатор наличия нескольких домов
@@ -535,18 +545,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                      return (
                          <div className="mt-8 bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
-                            <h3 className="font-semibold text-lg mb-4 text-slate-700 dark:text-slate-300">Без комнаты</h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {unassignedDevices.map(dev => (
-                                    <DeviceCard 
-                                    key={dev.id} 
-                                    device={dev} 
-                                    onToggle={onToggleDevice} 
-                                    isFavorite={favoriteDeviceIds.includes(dev.id)} 
-                                    onToggleFavorite={onToggleDeviceFavorite}
-                                    />
-                                ))}
-                            </div>
+                            <button
+                              onClick={toggleUnassignedDevices}
+                              className="w-full flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
+                            >
+                              {isUnassignedDevicesCollapsed ? (
+                                <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                              )}
+                              <h3 className="font-semibold text-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-primary"></span>
+                                  Без комнаты
+                              </h3>
+                            </button>
+                            {!isUnassignedDevicesCollapsed && (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                  {unassignedDevices.map(dev => (
+                                      <DeviceCard 
+                                      key={dev.id} 
+                                      device={dev} 
+                                      onToggle={onToggleDevice} 
+                                      isFavorite={favoriteDeviceIds.includes(dev.id)} 
+                                      onToggleFavorite={onToggleDeviceFavorite}
+                                      />
+                                  ))}
+                              </div>
+                            )}
                          </div>
                      );
                  })()}
