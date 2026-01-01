@@ -262,6 +262,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const hasFavorites = favoriteScenarios.length > 0 || favoriteDevices.length > 0;
 
+  // Автоматическое сворачивание блока "Сценарии", если он пуст
+  useEffect(() => {
+    // Проверяем, есть ли сохраненное состояние в localStorage
+    const key = getStorageKey('dashboard:scenariosCollapsed', activeHouseholdId);
+    const hasStoredState = localStorage.getItem(key) !== null;
+    
+    // Если сценариев нет и состояние не было сохранено пользователем, автоматически сворачиваем
+    if (activeScenarios.length === 0 && !hasStoredState) {
+      setIsScenariosCollapsed(true);
+      saveCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, true);
+    }
+    // Если сценариев нет, но секция развернута (пользователь мог развернуть вручную),
+    // оставляем как есть - не принуждаем к сворачиванию
+  }, [activeScenarios.length, activeHouseholdId]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-900 dark:text-slate-100 pb-12">
       {/* Top Header */}
