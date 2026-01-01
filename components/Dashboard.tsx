@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { YandexUserInfoResponse, YandexScenario, YandexHousehold } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
@@ -45,9 +45,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  // Состояние сворачивания секций (загружаем из localStorage)
-  const loadCollapseState = (key: string, defaultValue: boolean): boolean => {
+  // Вспомогательные функции для работы с localStorage с учетом householdId
+  const getStorageKey = (baseKey: string, householdId: string | null): string => {
+    if (!householdId) return baseKey;
+    return `${baseKey}:household:${householdId}`;
+  };
+
+  const loadCollapseState = (baseKey: string, householdId: string | null, defaultValue: boolean): boolean => {
     try {
+      const key = getStorageKey(baseKey, householdId);
       const stored = localStorage.getItem(key);
       return stored !== null ? JSON.parse(stored) : defaultValue;
     } catch (e) {
@@ -55,39 +61,62 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const saveCollapseState = (key: string, value: boolean): void => {
+  const saveCollapseState = (baseKey: string, householdId: string | null, value: boolean): void => {
     try {
+      const key = getStorageKey(baseKey, householdId);
       localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
-      console.error(`Error saving collapse state for ${key}:`, e);
+      console.error(`Error saving collapse state for ${baseKey}:`, e);
     }
   };
 
-  const [isScenariosCollapsed, setIsScenariosCollapsed] = useState(() => 
-    loadCollapseState('dashboard:scenariosCollapsed', false)
-  );
-  const [isDevicesCollapsed, setIsDevicesCollapsed] = useState(() => 
-    loadCollapseState('dashboard:devicesCollapsed', false)
-  );
-  const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(() => {
+  const loadCollapsedRooms = (householdId: string | null): Set<string> => {
     try {
-      const stored = localStorage.getItem('dashboard:collapsedRooms');
+      const key = getStorageKey('dashboard:collapsedRooms', householdId);
+      const stored = localStorage.getItem(key);
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch (e) {
       return new Set();
     }
-  });
+  };
+
+  const saveCollapsedRooms = (householdId: string | null, rooms: Set<string>): void => {
+    try {
+      const key = getStorageKey('dashboard:collapsedRooms', householdId);
+      localStorage.setItem(key, JSON.stringify(Array.from(rooms)));
+    } catch (e) {
+      console.error('Error saving collapsed rooms:', e);
+    }
+  };
+
+  // Состояние сворачивания секций (загружаем из localStorage с учетом текущего дома)
+  const [isScenariosCollapsed, setIsScenariosCollapsed] = useState(() => 
+    loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false)
+  );
+  const [isDevicesCollapsed, setIsDevicesCollapsed] = useState(() => 
+    loadCollapseState('dashboard:devicesCollapsed', activeHouseholdId, false)
+  );
+  const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(() => 
+    loadCollapsedRooms(activeHouseholdId)
+  );
+
+  // Обновляем состояние вкладок при переключении дома
+  useEffect(() => {
+    setIsScenariosCollapsed(loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false));
+    setIsDevicesCollapsed(loadCollapseState('dashboard:devicesCollapsed', activeHouseholdId, false));
+    setCollapsedRooms(loadCollapsedRooms(activeHouseholdId));
+  }, [activeHouseholdId]);
 
   const toggleScenarios = () => {
     const newValue = !isScenariosCollapsed;
     setIsScenariosCollapsed(newValue);
-    saveCollapseState('dashboard:scenariosCollapsed', newValue);
+    saveCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, newValue);
   };
 
   const toggleDevices = () => {
     const newValue = !isDevicesCollapsed;
     setIsDevicesCollapsed(newValue);
-    saveCollapseState('dashboard:devicesCollapsed', newValue);
+    saveCollapseState('dashboard:devicesCollapsed', activeHouseholdId, newValue);
   };
 
   const toggleRoom = (roomId: string) => {
@@ -98,11 +127,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       newCollapsedRooms.add(roomId);
     }
     setCollapsedRooms(newCollapsedRooms);
-    try {
-      localStorage.setItem('dashboard:collapsedRooms', JSON.stringify(Array.from(newCollapsedRooms)));
-    } catch (e) {
-      console.error('Error saving collapsed rooms:', e);
-    }
+    saveCollapsedRooms(activeHouseholdId, newCollapsedRooms);
   };
 
   // Текущий дом и индикатор наличия нескольких домов
