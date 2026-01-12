@@ -21,7 +21,7 @@ let favoritesData = []; // Данные избранных устройств/с
 // --- 1. Обработка закрытия окна (свернуть в трей) ---
 const minimizeToTray = (event) => {
 	// Если пользователь нажимает крестик, сворачиваем в трей (на macOS окно может скрыться/закрыться само)
-	if (appTray && mainWindow && process.platform !== 'darwin') {
+	if (appTray && mainWindow && !mainWindow.isDestroyed() && process.platform !== 'darwin') {
 		event.preventDefault(); // Предотвращаем закрытие
 		mainWindow.hide();      // Скрываем окно
 	}
@@ -29,26 +29,55 @@ const minimizeToTray = (event) => {
 
 // Функция для создания Tray
 function createTray() {
-    // В режиме разработки используем заглушку
-    const iconPath = path.join(__dirname, process.env.NODE_ENV === 'development' ? 'resources/icon.png' : 'resources/icon.png');
-    // Используем системную иконку или заглушку (для кроссплатформенности)
-    const fallbackIconPath = path.join(__dirname, 'electron.png'); // Предполагаем наличие electron.png в корне dist/
+    let iconPath;
     
-    // Используем fallback, если иконка не найдена, или просто строку, которая работает
+    // Определяем путь к иконке в зависимости от платформы
+    if (process.platform === 'darwin') {
+        // Для macOS используем trayTemplate.png (специальный формат для трея)
+        // Важно: trayTemplate.png должен быть шаблоном с прозрачностью
+        // macOS автоматически применяет темную/светлую тему к этому шаблону
+        // Файл должен быть монохромным (черно-белым) с альфа-каналом
+        // 
+        // Для поддержки Retina дисплеев: Electron автоматически использует
+        // trayTemplate@2x.png, если он находится в той же директории.
+        // Размеры: trayTemplate.png - 16x16px, trayTemplate@2x.png - 32x32px
+        iconPath = path.join(__dirname, 'resources', 'trayTemplate.png');
+    } else if (process.platform === 'win32') {
+        // Для Windows используем .ico файл
+        iconPath = path.join(__dirname, 'resources', 'icon.ico');
+    } else {
+        // Для Linux используем PNG
+        iconPath = path.join(__dirname, 'resources', 'icon.png');
+    }
+    
+    // Fallback для режима разработки или если файл не найден
+    const fallbackIconPath = path.join(__dirname, 'resources', 'icon.png');
+    
+    // Создаем Tray с обработкой ошибок
     try {
         appTray = new Tray(iconPath);
     } catch (e) {
-        console.warn(`Tray icon not found at ${iconPath}. Falling back.`);
-        // На Windows можно использовать иконки из DLL, но для кроссплатформенности проще использовать заглушку
-        appTray = new Tray(fallbackIconPath);
+        console.warn(`Tray icon not found at ${iconPath}. Falling back to ${fallbackIconPath}.`, e);
+        try {
+            appTray = new Tray(fallbackIconPath);
+        } catch (fallbackError) {
+            console.error('Failed to load fallback tray icon:', fallbackError);
+            // В крайнем случае используем системную иконку (если доступна)
+            return;
+        }
     }
     
     appTray.setToolTip('Управление Умным Домом Яндекс');
     
-    // Устанавливаем обработчик клика для открытия окна
+    // На macOS используем событие 'click', на других платформах может быть 'click' или 'right-click'
     appTray.on('click', () => {
-        if (mainWindow) {
-            mainWindow.show();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow.isVisible()) {
+                mainWindow.hide();
+            } else {
+                mainWindow.show();
+                mainWindow.focus();
+            }
         } else {
             createWindow();
         }
@@ -88,14 +117,14 @@ function updateTrayMenu() {
         if (isToggleableDevice) {
             // Отправляем команду TOGGLE_DEVICE в React-приложение
             clickAction = () => {
-                if (mainWindow) {
+                if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('tray:execute-command', 'TOGGLE_DEVICE', item.id, item.isOn);
                 }
             };
         } else if (item.type === 'scenario') {
             // Отправляем команду EXECUTE_SCENARIO в React-приложение
              clickAction = () => {
-                if (mainWindow) {
+                if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('tray:execute-command', 'EXECUTE_SCENARIO', item.id);
                 }
             };
@@ -113,7 +142,14 @@ function updateTrayMenu() {
     const contextMenu = Menu.buildFromTemplate([
         { 
             label: 'Открыть приложение', 
-            click: () => mainWindow ? mainWindow.show() : createWindow()
+            click: () => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.show();
+                    mainWindow.focus();
+                } else {
+                    createWindow();
+                }
+            }
         },
         // Разделитель перед динамической секцией, если она не пуста
         ...(favoriteMenuItems.length > 0 ? [{ type: 'separator' }] : []), 
@@ -144,7 +180,7 @@ function createWindow () {
         width: 1024,
         height: 768,
         webPreferences: {
-            nodeIntegration: false, 
+            nodeIntegration: false, 
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.cjs')
         }
@@ -152,9 +188,16 @@ function createWindow () {
     
     mainWindow.on('close', minimizeToTray);
     
+    // Очищаем ссылку на окно при его закрытии
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+    });
+    
     // Обработка восстановления из трея
     mainWindow.on('restore', () => {
-        mainWindow.show();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+        }
     });
 
 
@@ -175,8 +218,8 @@ if (!gotTheLock) {
 } else {
     // Обработчик для случая, когда пользователь пытается запустить второй экземпляр
     app.on('second-instance', () => {
-        // Если окно существует, показываем и фокусируем его
-        if (mainWindow) {
+        // Если окно существует и не уничтожено, показываем и фокусируем его
+        if (mainWindow && !mainWindow.isDestroyed()) {
             if (mainWindow.isMinimized()) {
                 mainWindow.restore();
             }
