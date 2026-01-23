@@ -57,14 +57,32 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
   // Предопределенные цвета для выбора
   const colorOptions: ColorOption[] = [
     { name: 'Красный', hsv: { h: 0, s: 100, v: 100 }, hex: '#FF0000' },
-    { name: 'Оранжевый', hsv: { h: 30, s: 100, v: 100 }, hex: '#FFA500' },
-    { name: 'Желтый', hsv: { h: 60, s: 100, v: 100 }, hex: '#FFFF00' },
-    { name: 'Зеленый', hsv: { h: 120, s: 100, v: 100 }, hex: '#00FF00' },
-    { name: 'Голубой', hsv: { h: 180, s: 100, v: 100 }, hex: '#00FFFF' },
-    { name: 'Синий', hsv: { h: 240, s: 100, v: 100 }, hex: '#0000FF' },
-    { name: 'Фиолетовый', hsv: { h: 270, s: 100, v: 100 }, hex: '#FF00FF' },
-    { name: 'Белый', hsv: { h: 0, s: 0, v: 100 }, hex: '#FFFFFF' },
     { name: 'Розовый', hsv: { h: 330, s: 100, v: 100 }, hex: '#FF69B4' },
+    { name: 'Малиновый', hsv: { h: 345, s: 100, v: 100 }, hex: '#C71585' },
+    { name: 'Бордовый', hsv: { h: 350, s: 100, v: 70 }, hex: '#800000' },
+    { name: 'Алый', hsv: { h: 0, s: 100, v: 85 }, hex: '#DC143C' },
+    { name: 'Оранжевый', hsv: { h: 30, s: 100, v: 100 }, hex: '#FFA500' },
+    { name: 'Коралл', hsv: { h: 16, s: 100, v: 100 }, hex: '#FF7F50' },
+    { name: 'Золотой', hsv: { h: 45, s: 100, v: 100 }, hex: '#FFD700' },
+    { name: 'Желтый', hsv: { h: 60, s: 100, v: 100 }, hex: '#FFFF00' },
+    { name: 'Лимонный', hsv: { h: 75, s: 100, v: 100 }, hex: '#CDDC39' },
+    { name: 'Лайм', hsv: { h: 90, s: 100, v: 100 }, hex: '#00FF00' },
+    { name: 'Зеленый', hsv: { h: 120, s: 100, v: 100 }, hex: '#00FF00' },
+    { name: 'Хвоя', hsv: { h: 120, s: 100, v: 70 }, hex: '#228B22' },
+    { name: 'Морской', hsv: { h: 150, s: 100, v: 100 }, hex: '#20B2AA' },
+    { name: 'Бирюзовый', hsv: { h: 160, s: 100, v: 100 }, hex: '#40E0D0' },
+    { name: 'Голубой', hsv: { h: 180, s: 100, v: 100 }, hex: '#00FFFF' },
+    { name: 'Аквамарин', hsv: { h: 160, s: 50, v: 100 }, hex: '#7FFFD4' },
+    { name: 'Стальной', hsv: { h: 180, s: 25, v: 100 }, hex: '#B0E0E6' },
+    { name: 'Синий', hsv: { h: 240, s: 100, v: 100 }, hex: '#0000FF' },
+    { name: 'Королевский', hsv: { h: 225, s: 100, v: 100 }, hex: '#4169E1' },
+    { name: 'Индиго', hsv: { h: 270, s: 100, v: 100 }, hex: '#4B0082' },
+    { name: 'Фиолетовый', hsv: { h: 280, s: 100, v: 100 }, hex: '#9400D3' },
+    { name: 'Магента', hsv: { h: 300, s: 100, v: 100 }, hex: '#FF00FF' },
+    { name: 'Оливковый', hsv: { h: 60, s: 100, v: 50 }, hex: '#808000' },
+    { name: 'Сливовый', hsv: { h: 270, s: 100, v: 65 }, hex: '#660066' },
+    { name: 'Белый', hsv: { h: 0, s: 0, v: 100 }, hex: '#FFFFFF' },
+    { name: 'Серый', hsv: { h: 0, s: 0, v: 50 }, hex: '#808080' },
   ];
 
   useEffect(() => {
@@ -108,7 +126,8 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
     if (colorMode === 'color' && selectedColor && hsvCapability) {
       settings.hsv = selectedColor.hsv;
     } else if (colorMode === 'temperature' && temperature_k !== null && temperatureKRange) {
-      settings.temperature_k = temperature_k;
+      // Инвертируем температуру: левое положение (холодный) = высокое значение K, правое (теплый) = низкое значение K
+      settings.temperature_k = temperatureKRange.min + temperatureKRange.max - temperature_k;
     }
 
     if (Object.keys(settings).length === 0) return;
@@ -125,6 +144,44 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
+      <style>{`
+        input[type="range"]::-webkit-slider-runnable-track {
+          background: linear-gradient(to right, #e2e8f0, #cbd5e1);
+          height: 8px;
+          border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: currentColor;
+          cursor: pointer;
+          margin-top: -4px;
+        }
+        input[type="range"]::-moz-range-track {
+          background: linear-gradient(to right, #e2e8f0, #cbd5e1);
+          height: 8px;
+          border-radius: 4px;
+          border: none;
+        }
+        input[type="range"]::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: currentColor;
+          cursor: pointer;
+          border: none;
+          margin-top: -4px;
+        }
+        .dark input[type="range"]::-webkit-slider-runnable-track {
+          background: linear-gradient(to right, #475569, #64748b);
+        }
+        .dark input[type="range"]::-moz-range-track {
+          background: linear-gradient(to right, #475569, #64748b);
+        }
+      `}</style>
       <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
@@ -205,30 +262,32 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Выберите цвет
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                {colorOptions.map((color) => (
-                  <button
-                    key={color.name}
-                    onClick={() => setSelectedColor(color)}
-                    className={`
-                      relative p-4 rounded-lg transition-all duration-200
-                      ${selectedColor?.name === color.name
-                        ? 'ring-2 ring-purple-600 dark:ring-primary scale-105'
-                        : 'hover:scale-105'
-                      }
-                    `}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
-                  >
-                    {selectedColor?.name === color.name && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
+              <div className="flex justify-center">
+                <div className="grid grid-cols-9 gap-1">
+                  {colorOptions.map((color) => (
+                    <button
+                      key={color.name}
+                      onClick={() => setSelectedColor(color)}
+                      className={`
+                        relative w-12 h-12 rounded-lg transition-all duration-200 shadow-md
+                        ${selectedColor?.name === color.name
+                          ? 'ring-2 ring-purple-600 dark:ring-primary scale-105 shadow-md'
+                          : 'hover:scale-105 hover:shadow-md'
+                        }
+                      `}
+                      style={{ backgroundColor: color.hex }}
+                      title={color.name}
+                    >
+                      {selectedColor?.name === color.name && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </button>
-                ))}
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
