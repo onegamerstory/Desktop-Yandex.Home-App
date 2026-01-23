@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../types';
 import { getIconForDevice, localizeUnit } from '../constants';
-import { Loader2, Power, Star } from 'lucide-react';
+import { Loader2, Power, Star, Settings } from 'lucide-react';
 
 interface DeviceCardProps {
   device: YandexDevice;
@@ -133,19 +133,36 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
       `}
     >
 	
-	<div
+	<div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+      {/* Settings button for thermostat */}
+      {isThermostat && onOpenSettings && (
+        <div
+          onClick={(e) => {
+              e.stopPropagation();
+              onOpenSettings(device);
+          }}
+          className="p-1 rounded-full transition-all duration-200 cursor-pointer text-gray-400 dark:text-slate-500 opacity-50 hover:opacity-100 hover:text-slate-900 dark:hover:text-white"
+          title="Открыть настройки"
+        >
+          <Settings className="w-4 h-4" />
+        </div>
+      )}
+
+      {/* Favorite star */}
+	  <div
           onClick={(e) => {
               e.stopPropagation(); // Важно: предотвращаем переключение устройства
               onToggleFavorite(device.id);
           }}
           className={`
-              absolute top-3 right-3 z-20 p-1 rounded-full transition-all duration-200 cursor-pointer
+              p-1 rounded-full transition-all duration-200 cursor-pointer
               ${isFavorite ? 'text-yellow-500 dark:text-accent bg-white/80 dark:bg-surface/80 hover:bg-white dark:hover:bg-surface' : 'text-gray-400 dark:text-slate-500 hover:text-yellow-500 dark:hover:text-accent opacity-0 group-hover:opacity-100'}
           `}
           title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
       >
           <Star className="w-4 h-4 fill-current" />
       </div>
+    </div>
 	
       <div className="flex items-start justify-between w-full">
         <div
