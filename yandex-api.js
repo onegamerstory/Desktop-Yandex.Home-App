@@ -135,7 +135,7 @@ export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false
 
     // Корректно формируем actions для mode и range
     const actions = modeActions.map(action => {
-        if (action.type === 'devices.capabilities.range' || action.instance === 'temperature') {
+        if (action.type === 'devices.capabilities.range' || action.instance === 'temperature' || action.instance === 'brightness') {
             return {
                 type: 'devices.capabilities.range',
                 state: {

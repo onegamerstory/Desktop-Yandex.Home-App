@@ -3,6 +3,7 @@ import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice }
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
 import { ThermostatSettingsModal } from './ThermostatSettingsModal';
+import { BrightnessSettingsModal } from './BrightnessSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -47,6 +48,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedThermostatDevice, setSelectedThermostatDevice] = useState<YandexDevice | null>(null);
+  const [selectedLightDevice, setSelectedLightDevice] = useState<YandexDevice | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   // Вспомогательные функции для работы с localStorage с учетом householdId
@@ -295,6 +297,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedThermostatDevice(null);
   }, [selectedThermostatDevice, onSetDeviceMode]);
 
+  const handleOpenLightSettings = useCallback((device: YandexDevice) => {
+    setSelectedLightDevice(device);
+  }, []);
+
+  const handleCloseLightSettings = useCallback(() => {
+    setSelectedLightDevice(null);
+  }, []);
+
+  const handleApplyLightBrightness = useCallback(async (brightness: number) => {
+    if (!selectedLightDevice) return;
+    // Формируем payload для яркости
+    const brightnessAction = {
+      instance: 'brightness',
+      value: brightness.toString(),
+      type: 'devices.capabilities.range'
+    };
+    await onSetDeviceMode(selectedLightDevice.id, [brightnessAction], true); // Включаем устройство при применении
+    // Модальное окно остается открытым при нажатии "Применить"
+  }, [selectedLightDevice, onSetDeviceMode]);
+
   // Автоматическое сворачивание блока "Сценарии", если он пуст
   useEffect(() => {
     // Проверяем, есть ли сохраненное состояние в localStorage
@@ -437,7 +459,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 									onToggle={onToggleDevice} 
 									isFavorite={true} 
 									onToggleFavorite={onToggleDeviceFavorite}
-									onOpenSettings={handleOpenThermostatSettings}
+									onOpenSettings={(dev) => {
+										if (dev.type === 'devices.types.light') {
+											handleOpenLightSettings(dev);
+										} else {
+											handleOpenThermostatSettings(dev);
+										}
+									}}
 								/>
 							))}
 						</div>
@@ -516,7 +544,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             onToggle={onToggleDevice} 
                             isFavorite={favoriteDeviceIds.includes(device.id)} 
                             onToggleFavorite={onToggleDeviceFavorite}
-                            onOpenSettings={handleOpenThermostatSettings}
+                            onOpenSettings={(dev) => {
+                              if (dev.type === 'devices.types.light') {
+                                handleOpenLightSettings(dev);
+                              } else {
+                                handleOpenThermostatSettings(dev);
+                              }
+                            }}
                             />
                         ))}
                      </div>
@@ -553,7 +587,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                           onToggle={onToggleDevice} 
                                           isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                           onToggleFavorite={onToggleDeviceFavorite}
-                                          onOpenSettings={handleOpenThermostatSettings}
+                                          onOpenSettings={(device) => {
+                                            if (device.type === 'devices.types.light') {
+                                              handleOpenLightSettings(device);
+                                            } else {
+                                              handleOpenThermostatSettings(device);
+                                            }
+                                          }}
                                           />
                                       ))}
                                   </div>
@@ -594,7 +634,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                       onToggle={onToggleDevice} 
                                       isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                       onToggleFavorite={onToggleDeviceFavorite}
-                                      onOpenSettings={handleOpenThermostatSettings}
+                                      onOpenSettings={(device) => {
+                                        if (device.type === 'devices.types.light') {
+                                          handleOpenLightSettings(device);
+                                        } else {
+                                          handleOpenThermostatSettings(device);
+                                        }
+                                      }}
                                       />
                                   ))}
                               </div>
@@ -653,6 +699,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           isOpen={!!selectedThermostatDevice}
           onClose={handleCloseThermostatSettings}
           onApply={handleApplyThermostatSettings}
+        />
+      )}
+
+      {/* Light Brightness Settings Modal */}
+      {selectedLightDevice && (
+        <BrightnessSettingsModal
+          device={selectedLightDevice}
+          isOpen={!!selectedLightDevice}
+          onClose={handleCloseLightSettings}
+          onApply={handleApplyLightBrightness}
         />
       )}
 	  

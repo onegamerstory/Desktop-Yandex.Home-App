@@ -16,6 +16,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
 
   // Проверяем, является ли устройство кондиционером
   const isThermostat = device.type === 'devices.types.thermostat.ac';
+  
+  // Проверяем, является ли устройство лампочкой (поддерживаем все типы: light, light.lamp, light.ceiling, light.strip и т.д.)
+  const isLight = device.type.startsWith('devices.types.light');
 
   // Find the on_off capability
   const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
@@ -100,7 +103,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    if (isThermostat && onOpenSettings) {
+    if ((isThermostat || isLight) && onOpenSettings) {
       e.preventDefault();
       e.stopPropagation();
       onOpenSettings(device);
@@ -134,15 +137,15 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
     >
 	
 	<div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-      {/* Settings button for thermostat */}
-      {isThermostat && onOpenSettings && (
+      {/* Settings button for thermostat and light */}
+      {(isThermostat || isLight) && onOpenSettings && (
         <div
           onClick={(e) => {
               e.stopPropagation();
               onOpenSettings(device);
           }}
           className="p-1 rounded-full transition-all duration-200 cursor-pointer text-gray-400 dark:text-slate-500 opacity-50 hover:opacity-100 hover:text-slate-900 dark:hover:text-white"
-          title="Открыть настройки"
+          title={isThermostat ? "Открыть настройки кондиционера" : "Открыть настройки яркости"}
         >
           <Settings className="w-4 h-4" />
         </div>
