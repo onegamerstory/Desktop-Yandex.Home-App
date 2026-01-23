@@ -37,6 +37,28 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
   const [swingMode, setSwingMode] = useState<string>('');
   const [fanSpeed, setFanSpeed] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [temperatureRange, setTemperatureRange] = useState<{ min: number; max: number; precision: number } | null>(null);
+
+  // Найти capability диапазона температуры
+  const rangeCapability = device.capabilities.find(
+    (cap) => cap.type === 'devices.capabilities.range' && (cap.parameters as any)?.instance === 'temperature'
+  ) as YandexCapability & { parameters?: { instance: string; range: { min: number; max: number; precision: number } } };
+
+  useEffect(() => {
+    if (rangeCapability && rangeCapability.parameters && (rangeCapability.parameters as any).range) {
+      setTemperatureRange((rangeCapability.parameters as any).range);
+      // Установить текущее значение температуры из state
+      if (rangeCapability.state && typeof rangeCapability.state.value === 'number') {
+        setTemperature(rangeCapability.state.value);
+      } else {
+        setTemperature((rangeCapability.parameters as any).range.min);
+      }
+    } else {
+      setTemperatureRange(null);
+      setTemperature(null);
+    }
+  }, [rangeCapability, isOpen, device]);
 
   // Ищем все capabilities с типом 'devices.capabilities.mode'
   const modeCapabilities = device.capabilities.filter(
@@ -172,23 +194,33 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
   if (!isOpen) return null;
 
   const handleApply = async () => {
-    const modeActions: Array<{ instance: string; value: string }> = [];
-    
+    // Формируем массив actions в расширенном формате для внутреннего использования
+    const modeActions: Array<{ instance: string; value: string | number; type?: string }> = [];
+
     if (thermostatCap && thermostatMode) {
-      modeActions.push({ instance: 'thermostat', value: thermostatMode });
+      modeActions.push({ instance: 'thermostat', value: thermostatMode, type: 'devices.capabilities.mode' });
     }
     if (swingCap && swingMode) {
-      modeActions.push({ instance: 'swing', value: swingMode });
+      modeActions.push({ instance: 'swing', value: swingMode, type: 'devices.capabilities.mode' });
     }
     if (fanSpeedCap && fanSpeed) {
-      modeActions.push({ instance: 'fan_speed', value: fanSpeed });
+      modeActions.push({ instance: 'fan_speed', value: fanSpeed, type: 'devices.capabilities.mode' });
+    }
+    if (rangeCapability && temperature !== null) {
+      modeActions.push({ instance: 'temperature', value: temperature, type: 'devices.capabilities.range' });
     }
 
     if (modeActions.length === 0) return;
 
     setIsLoading(true);
     try {
-      await onApply(modeActions, true); // Передаем true для включения устройства
+      // Преобразуем в формат, ожидаемый onApply, и передаём расширенную информацию через замыкание
+      const actionsForApi = modeActions.map(action => ({
+        instance: action.instance,
+        value: String(action.value),
+        type: action.type
+      }));
+      await (onApply as any)(actionsForApi, true); // Передаем true для включения устройства
     } catch (error) {
       console.error('Ошибка при применении настроек:', error);
     } finally {
@@ -219,6 +251,28 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
 
         {/* Settings */}
         <div className="space-y-6 mb-6">
+          {/* Temperature Range Slider */}
+          {temperatureRange && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                Температура
+                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">({temperature} °C)</span>
+              </label>
+              <input
+                type="range"
+                min={temperatureRange.min}
+                max={temperatureRange.max}
+                step={temperatureRange.precision}
+                value={temperature ?? temperatureRange.min}
+                onChange={e => setTemperature(Number(e.target.value))}
+                className="w-full accent-purple-600 dark:accent-primary"
+              />
+              <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <span>{temperatureRange.min}°C</span>
+                <span>{temperatureRange.max}°C</span>
+              </div>
+            </div>
+          )}
           {/* Thermostat Mode */}
           {thermostatCap && thermostatModes.length > 0 && (
             <div>

@@ -132,13 +132,27 @@ export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false
     // modeActions - массив объектов { instance: string, value: string }
     // Например: [{ instance: "thermostat", value: "cool" }, { instance: "fan_speed", value: "auto" }]
     // turnOn - опциональный параметр для включения устройства
-    const actions = modeActions.map(action => ({
-        type: "devices.capabilities.mode",
-        state: {
-            instance: action.instance,
-            value: action.value
+
+    // Корректно формируем actions для mode и range
+    const actions = modeActions.map(action => {
+        if (action.type === 'devices.capabilities.range' || action.instance === 'temperature') {
+            return {
+                type: 'devices.capabilities.range',
+                state: {
+                    instance: action.instance,
+                    value: Number(action.value)
+                }
+            };
         }
-    }));
+        // По умолчанию mode
+        return {
+            type: 'devices.capabilities.mode',
+            state: {
+                instance: action.instance,
+                value: action.value
+            }
+        };
+    });
 
     // Если нужно включить устройство, добавляем действие включения
     if (turnOn) {
