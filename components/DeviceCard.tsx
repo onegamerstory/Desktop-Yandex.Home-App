@@ -133,19 +133,19 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
       `}
     >
 	
-	<button
+	<div
           onClick={(e) => {
               e.stopPropagation(); // Важно: предотвращаем переключение устройства
               onToggleFavorite(device.id);
           }}
           className={`
-              absolute top-3 right-3 z-20 p-1 rounded-full transition-all duration-200
+              absolute top-3 right-3 z-20 p-1 rounded-full transition-all duration-200 cursor-pointer
               ${isFavorite ? 'text-yellow-500 dark:text-accent bg-white/80 dark:bg-surface/80 hover:bg-white dark:hover:bg-surface' : 'text-gray-400 dark:text-slate-500 hover:text-yellow-500 dark:hover:text-accent opacity-0 group-hover:opacity-100'}
           `}
           title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
       >
           <Star className="w-4 h-4 fill-current" />
-      </button>
+      </div>
 	
       <div className="flex items-start justify-between w-full">
         <div
