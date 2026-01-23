@@ -8,10 +8,14 @@ interface DeviceCardProps {
   onToggle: (id: string, currentState: boolean) => Promise<void>;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
+  onOpenSettings?: (device: YandexDevice) => void;
 }
 
-export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite }) => {
+export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings }) => {
   const [loading, setLoading] = useState(false);
+
+  // Проверяем, является ли устройство кондиционером
+  const isThermostat = device.type === 'devices.types.thermostat.ac';
 
   // Find the on_off capability
   const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
@@ -95,11 +99,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (isThermostat && onOpenSettings) {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenSettings(device);
+    }
+  };
+
   const icon = getIconForDevice(device.type);
 
   return (
     <button
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
       // Отключаем только во время загрузки, чтобы датчики без on_off
       // всё равно можно было добавлять/убирать из избранного.
       disabled={loading}

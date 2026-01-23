@@ -659,3 +659,13 @@ export const executeScenario = async (token: string, scenarioId: string): Promis
         throw error;
     }
 };
+
+export const setDeviceMode = async (token: string, deviceId: string, modeActions: Array<{ instance: string; value: string }>, turnOn: boolean = false): Promise<void> => {
+    try {
+        await yandexApi.setDeviceMode(token, deviceId, modeActions, turnOn);
+        console.log('Режим устройства установлен успешно.');
+    } catch (error) {
+        console.error('Ошибка при установке режима устройства через IPC:', error);
+        throw error;
+    }
+};

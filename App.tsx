@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
-import { fetchUserInfo, executeScenario, toggleDevice } from './services/yandexIoT';
+import { fetchUserInfo, executeScenario, toggleDevice, setDeviceMode } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
 import { formatSensorValue } from './constants';
 import { AlertCircle, X } from 'lucide-react';
@@ -270,22 +270,40 @@ function App() {
   	}, [token, userData, refreshDashboardData, stableSortData, showNotification]);
 
 	// Обработчик запуска сценария
-  	const handleExecuteScenario = useCallback(async (scenarioId: string) => {
-    		if (!token) return;
-    		try {
-      			await executeScenario(token, scenarioId);
-      			showNotification('Сценарий успешно запущен', 'success');
+ 	const handleExecuteScenario = useCallback(async (scenarioId: string) => {
+   		if (!token) return;
+   		try {
+     			await executeScenario(token, scenarioId);
+     			showNotification('Сценарий успешно запущен', 'success');
 				// Обновляем данные на случай, если сценарий изменил состояние устройств
 				refreshDashboardData(token); 
-    		} catch (err) {
-      			if (err instanceof Error) {
-        				showNotification(err.message, 'error');
-      			} else {
-        				showNotification('Ошибка выполнения сценария', 'error');
-      			}
-      			throw err; // Пробрасываем ошибку для обработки, например, в трее
-    		}
-  	}, [token, refreshDashboardData, showNotification]);
+   		} catch (err) {
+     			if (err instanceof Error) {
+       				showNotification(err.message, 'error');
+     			} else {
+       				showNotification('Ошибка выполнения сценария', 'error');
+     			}
+     			throw err; // Пробрасываем ошибку для обработки, например, в трее
+   		}
+ 	}, [token, refreshDashboardData, showNotification]);
+
+	// Обработчик установки режима устройства (для кондиционеров)
+ 	const handleSetDeviceMode = useCallback(async (deviceId: string, modeActions: Array<{ instance: string; value: string }>, turnOn: boolean = false) => {
+   		if (!token) return;
+   		try {
+     			await setDeviceMode(token, deviceId, modeActions, turnOn);
+     			showNotification('Настройки успешно применены', 'success');
+				// Обновляем данные для синхронизации состояния
+				refreshDashboardData(token); 
+   		} catch (err) {
+     			if (err instanceof Error) {
+       				showNotification(err.message, 'error');
+     			} else {
+       				showNotification('Ошибка применения настроек', 'error');
+     			}
+     			throw err;
+   		}
+ 	}, [token, refreshDashboardData, showNotification]);
 	
 	// Обработчик отправки токена
   	const handleTokenSubmit = async (newToken: string) => {
@@ -542,6 +560,7 @@ useEffect(() => {
           onLogout={handleLogout} 
           onExecuteScenario={handleExecuteScenario} 
           onToggleDevice={handleToggleDevice}
+          onSetDeviceMode={handleSetDeviceMode}
 		      onRefresh={() => token && refreshDashboardData(token)}
           isRefreshing={isRefreshing}
 		      favoriteDeviceIds={favoriteDeviceIds}

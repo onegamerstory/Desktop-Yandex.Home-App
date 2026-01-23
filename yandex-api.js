@@ -126,3 +126,61 @@ export const toggleDevice = async (token, deviceId, newState) => {
         throw error;
     }
 };
+
+// 4. Установка режима устройства (для кондиционеров и других устройств с режимами)
+export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false) => {
+    // modeActions - массив объектов { instance: string, value: string }
+    // Например: [{ instance: "thermostat", value: "cool" }, { instance: "fan_speed", value: "auto" }]
+    // turnOn - опциональный параметр для включения устройства
+    const actions = modeActions.map(action => ({
+        type: "devices.capabilities.mode",
+        state: {
+            instance: action.instance,
+            value: action.value
+        }
+    }));
+
+    // Если нужно включить устройство, добавляем действие включения
+    if (turnOn) {
+        actions.push({
+            type: "devices.capabilities.on_off",
+            state: {
+                instance: "on",
+                value: true
+            }
+        });
+    }
+
+    const body = {
+        devices: [
+            {
+                id: deviceId,
+                actions: actions
+            }
+        ]
+    };
+
+    try {
+        const response = await fetch(`${BASE_URL}/devices/actions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Не удалось изменить режим устройства: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const deviceResult = data.devices?.find((d) => d.id === deviceId);
+        if (deviceResult && 'error_code' in deviceResult) {
+            throw new Error(`Ошибка устройства: ${deviceResult.error_message || deviceResult.error_code}`);
+        }
+    } catch (error) {
+        handleFetchError(error);
+        throw error;
+    }
+};

@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { YandexUserInfoResponse, YandexScenario, YandexHousehold } from '../types';
+import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
+import { ThermostatSettingsModal } from './ThermostatSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -15,6 +16,7 @@ interface DashboardProps {
   onLogout: () => void;
   onExecuteScenario: (id: string) => Promise<void>;
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
+  onSetDeviceMode: (deviceId: string, modeActions: Array<{ instance: string; value: string }>, turnOn?: boolean) => Promise<void>;
   onRefresh: () => void;
   isRefreshing: boolean;
   favoriteDeviceIds: string[];
@@ -33,6 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onLogout,
   onExecuteScenario,
   onToggleDevice,
+  onSetDeviceMode,
   onRefresh,
   isRefreshing,
   favoriteDeviceIds,
@@ -43,6 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onToggleAutostart,
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedThermostatDevice, setSelectedThermostatDevice] = useState<YandexDevice | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   // Вспомогательные функции для работы с localStorage с учетом householdId
@@ -272,6 +276,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const hasFavorites = favoriteScenarios.length > 0 || favoriteDevices.length > 0;
 
+  const handleOpenThermostatSettings = useCallback((device: YandexDevice) => {
+    setSelectedThermostatDevice(device);
+  }, []);
+
+  const handleCloseThermostatSettings = useCallback(() => {
+    setSelectedThermostatDevice(null);
+  }, []);
+
+  const handleApplyThermostatSettings = useCallback(async (modeActions: Array<{ instance: string; value: string }>) => {
+    if (!selectedThermostatDevice) return;
+    await onSetDeviceMode(selectedThermostatDevice.id, modeActions, true); // Включаем устройство при применении
+  }, [selectedThermostatDevice, onSetDeviceMode]);
+
+  const handleOkThermostatSettings = useCallback(async (modeActions: Array<{ instance: string; value: string }>) => {
+    if (!selectedThermostatDevice) return;
+    await onSetDeviceMode(selectedThermostatDevice.id, modeActions);
+    setSelectedThermostatDevice(null);
+  }, [selectedThermostatDevice, onSetDeviceMode]);
+
   // Автоматическое сворачивание блока "Сценарии", если он пуст
   useEffect(() => {
     // Проверяем, есть ли сохраненное состояние в localStorage
@@ -414,6 +437,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 									onToggle={onToggleDevice} 
 									isFavorite={true} 
 									onToggleFavorite={onToggleDeviceFavorite}
+									onOpenSettings={handleOpenThermostatSettings}
 								/>
 							))}
 						</div>
@@ -492,6 +516,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             onToggle={onToggleDevice} 
                             isFavorite={favoriteDeviceIds.includes(device.id)} 
                             onToggleFavorite={onToggleDeviceFavorite}
+                            onOpenSettings={handleOpenThermostatSettings}
                             />
                         ))}
                      </div>
@@ -528,6 +553,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                           onToggle={onToggleDevice} 
                                           isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                           onToggleFavorite={onToggleDeviceFavorite}
+                                          onOpenSettings={handleOpenThermostatSettings}
                                           />
                                       ))}
                                   </div>
@@ -568,6 +594,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                       onToggle={onToggleDevice} 
                                       isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                       onToggleFavorite={onToggleDeviceFavorite}
+                                      onOpenSettings={handleOpenThermostatSettings}
                                       />
                                   ))}
                               </div>
@@ -617,6 +644,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Thermostat Settings Modal */}
+      {selectedThermostatDevice && (
+        <ThermostatSettingsModal
+          device={selectedThermostatDevice}
+          isOpen={!!selectedThermostatDevice}
+          onClose={handleCloseThermostatSettings}
+          onApply={handleApplyThermostatSettings}
+        />
       )}
 	  
     </div>

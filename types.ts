@@ -10,12 +10,22 @@ export interface YandexCapabilityState {
   value: boolean | number | string;
 }
 
+export interface YandexModeOption {
+  value: string;
+  name: string;
+}
+
+export interface YandexModeCapabilityParameters {
+  instance: string;
+  modes: YandexModeOption[];
+}
+
 export interface YandexCapability {
   type: string;
   retrievable: boolean;
   reportable: boolean;
   state?: YandexCapabilityState;
-  parameters?: unknown;
+  parameters?: unknown | YandexModeCapabilityParameters;
 }
 
 // Дополнительные типы для свойств датчиков (сенсоров)

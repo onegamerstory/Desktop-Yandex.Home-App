@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
     fetchUserInfo: (token) => ipcRenderer.invoke('yandex-api:fetchUserInfo', token),
     executeScenario: (token, scenarioId) => ipcRenderer.invoke('yandex-api:executeScenario', token, scenarioId),
     toggleDevice: (token, deviceId, newState) => ipcRenderer.invoke('yandex-api:toggleDevice', token, deviceId, newState),
+    setDeviceMode: (token, deviceId, modeActions, turnOn) => ipcRenderer.invoke('yandex-api:setDeviceMode', token, deviceId, modeActions, turnOn),
     fetchDevice: (token, deviceId) => ipcRenderer.invoke('yandex-api:fetchDevice', token, deviceId),
     
     // Запрашивает токен из Keytar

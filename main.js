@@ -262,6 +262,14 @@ if (!gotTheLock) {
             }
         });
 
+        ipcMain.handle('yandex-api:setDeviceMode', async (event, token, deviceId, modeActions, turnOn) => {
+            try {
+                return await yandexApi.setDeviceMode(token, deviceId, modeActions, turnOn);
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        });
+
         ipcMain.handle('yandex-api:fetchDevice', async (event, token, deviceId) => {
             try {
                 return await yandexApi.fetchDevice(token, deviceId);
