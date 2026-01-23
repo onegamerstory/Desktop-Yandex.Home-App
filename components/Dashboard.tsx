@@ -305,15 +305,55 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedLightDevice(null);
   }, []);
 
-  const handleApplyLightBrightness = useCallback(async (brightness: number) => {
+  const handleApplyLightBrightness = useCallback(async (settings: {
+    brightness?: number;
+    hsv?: { h: number; s: number; v: number };
+    rgb?: number;
+    temperature_k?: number;
+  }) => {
     if (!selectedLightDevice) return;
-    // Формируем payload для яркости
-    const brightnessAction = {
-      instance: 'brightness',
-      value: brightness.toString(),
-      type: 'devices.capabilities.range'
-    };
-    await onSetDeviceMode(selectedLightDevice.id, [brightnessAction], true); // Включаем устройство при применении
+
+    const actions: any[] = [];
+
+    // Добавляем яркость если есть
+    if (settings.brightness !== undefined) {
+      actions.push({
+        instance: 'brightness',
+        value: settings.brightness.toString(),
+        type: 'devices.capabilities.range'
+      });
+    }
+
+    // Добавляем HSV цвет если есть
+    if (settings.hsv) {
+      actions.push({
+        instance: 'hsv',
+        value: settings.hsv,
+        type: 'devices.capabilities.color_setting'
+      });
+    }
+
+    // Добавляем RGB цвет если есть
+    if (settings.rgb !== undefined) {
+      actions.push({
+        instance: 'rgb',
+        value: settings.rgb,
+        type: 'devices.capabilities.color_setting'
+      });
+    }
+
+    // Добавляем температуру света если есть
+    if (settings.temperature_k !== undefined) {
+      actions.push({
+        instance: 'temperature_k',
+        value: settings.temperature_k.toString(),
+        type: 'devices.capabilities.color_setting'
+      });
+    }
+
+    if (actions.length > 0) {
+      await onSetDeviceMode(selectedLightDevice.id, actions, true); // Включаем устройство при применении
+    }
     // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedLightDevice, onSetDeviceMode]);
 

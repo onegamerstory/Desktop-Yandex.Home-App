@@ -129,12 +129,24 @@ export const toggleDevice = async (token, deviceId, newState) => {
 
 // 4. Установка режима устройства (для кондиционеров и других устройств с режимами)
 export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false) => {
-    // modeActions - массив объектов { instance: string, value: string }
-    // Например: [{ instance: "thermostat", value: "cool" }, { instance: "fan_speed", value: "auto" }]
+    // modeActions - массив объектов { instance: string, value: any, type?: string }
+    // Например: 
+    // [{ instance: "thermostat", value: "cool" }, { instance: "fan_speed", value: "auto" }] - mode
+    // [{ instance: "brightness", value: "50", type: 'devices.capabilities.range' }] - range
+    // [{ instance: "hsv", value: { h: 125, s: 25, v: 100 }, type: 'devices.capabilities.color_setting' }] - color
     // turnOn - опциональный параметр для включения устройства
 
-    // Корректно формируем actions для mode и range
+    // Корректно формируем actions для mode, range и color_setting
     const actions = modeActions.map(action => {
+        if (action.type === 'devices.capabilities.color_setting' || action.instance === 'hsv' || action.instance === 'rgb' || action.instance === 'temperature_k') {
+            return {
+                type: 'devices.capabilities.color_setting',
+                state: {
+                    instance: action.instance,
+                    value: action.instance === 'temperature_k' ? Number(action.value) : action.value // temperature_k как число, HSV и RGB как объекты
+                }
+            };
+        }
         if (action.type === 'devices.capabilities.range' || action.instance === 'temperature' || action.instance === 'brightness') {
             return {
                 type: 'devices.capabilities.range',
