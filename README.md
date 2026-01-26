@@ -79,14 +79,17 @@
 
 При запуске приложения отобразится экран входа, где основным параметром входа будет являться токен Умного дома Яндекс.
 
-<img width="797" height="737" alt="image" src="https://github.com/user-attachments/assets/b76722cd-c893-405d-bc1a-9ba77b1f196e" />
+<img width="554" height="566" alt="image" src="https://github.com/user-attachments/assets/b9777898-fbf7-4b80-938b-79c240cc2f50" />
+
 
 
 После пользователь попадает в основное окно со всеми устройствами и сценариями Умного дома, которые были настроены через приложение **"Умный дом с Алисой"**
 
-<img width="1001" height="754" alt="image" src="https://github.com/user-attachments/assets/669c560d-c3a7-4ae8-b794-7bbbc7a03737" />
-<img width="994" height="897" alt="image" src="https://github.com/user-attachments/assets/c71d9d86-3ca2-407e-8501-1660b5d36004" />
-
+<img width="1083" height="974" alt="image" src="https://github.com/user-attachments/assets/d2aa7c23-80fb-47e4-8788-65689d423576" />
+<img width="1083" height="974" alt="image" src="https://github.com/user-attachments/assets/3cfef3ac-5e90-459d-b087-a04c80c422b7" />
+<img width="727" height="750" alt="image" src="https://github.com/user-attachments/assets/c8e8943e-ae14-436f-b45f-b03bb5eea2c0" />
+<img width="678" height="590" alt="image" src="https://github.com/user-attachments/assets/4ae9bd11-d5ab-4cc0-ba37-a387d48de7d8" />
+<img width="570" height="676" alt="image" src="https://github.com/user-attachments/assets/7d125328-bf0b-4650-94fc-63905c49ab92" />
 
 ## 3. Удаление
 
