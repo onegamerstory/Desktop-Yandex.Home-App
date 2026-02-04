@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { YandexGroup, YandexDevice } from '../types';
 import { DeviceCard } from './DeviceCard';
-import { Loader2, Power, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Power, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
 interface GroupCardProps {
   group: YandexGroup;
@@ -11,6 +11,7 @@ interface GroupCardProps {
   favoriteDeviceIds: string[];
   onToggleDeviceFavorite: (id: string) => void;
   onOpenSettings?: (device: YandexDevice) => void;
+  onOpenGroupSettings?: (group: YandexGroup) => void;
 }
 
 export const GroupCard: React.FC<GroupCardProps> = ({
@@ -21,6 +22,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
   favoriteDeviceIds,
   onToggleDeviceFavorite,
   onOpenSettings,
+  onOpenGroupSettings,
 }) => {
   const [loading, setLoading] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -29,6 +31,11 @@ export const GroupCard: React.FC<GroupCardProps> = ({
   const groupDevices = useMemo(() => {
     return devices.filter(d => group.devices.includes(d.id));
   }, [devices, group.devices]);
+
+  // Проверяем, является ли группа группой светильников
+  const isLightGroup = useMemo(() => {
+    return groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.light');
+  }, [groupDevices]);
 
   // Определяем состояние группы: ON если все устройства включены, OFF если все выключены, иначе смешанное
   const groupIsOn = useMemo(() => {
@@ -88,24 +95,35 @@ export const GroupCard: React.FC<GroupCardProps> = ({
           </span>
         </div>
 
-        {/* Тумблер вкл/выкл для группы */}
+      {/* Тумблер вкл/выкл для группы */}
         {hasOnOffCapability && (
-          <button
-            onClick={handleToggleGroup}
-            disabled={loading}
-            className={`flex-shrink-0 p-3 rounded-lg transition-all duration-300 ${
-              groupIsEnabled
-                ? 'bg-purple-100 dark:bg-primary/20 text-purple-600 dark:text-primary hover:bg-purple-200 dark:hover:bg-primary/30'
-                : 'bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
-            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title={groupIsEnabled ? 'Выключить группу' : 'Включить группу'}
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Power className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            {isLightGroup && onOpenGroupSettings && (
+              <button
+                onClick={() => onOpenGroupSettings(group)}
+                className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
+                title="Настройки освещения группы"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
             )}
-          </button>
+            <button
+              onClick={handleToggleGroup}
+              disabled={loading}
+              className={`flex-shrink-0 p-3 rounded-lg transition-all duration-300 ${
+                groupIsEnabled
+                  ? 'bg-purple-100 dark:bg-primary/20 text-purple-600 dark:text-primary hover:bg-purple-200 dark:hover:bg-primary/30'
+                  : 'bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={groupIsEnabled ? 'Выключить группу' : 'Включить группу'}
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Power className="w-5 h-5" />
+              )}
+            </button>
+          </div>
         )}
       </div>
 

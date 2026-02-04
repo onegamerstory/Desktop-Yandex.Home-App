@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice } from '../types';
+import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
 import { GroupCard } from './GroupCard';
 import { ThermostatSettingsModal } from './ThermostatSettingsModal';
 import { BrightnessSettingsModal } from './BrightnessSettingsModal';
+import { GroupLightSettingsModal } from './GroupLightSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -52,6 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedThermostatDevice, setSelectedThermostatDevice] = useState<YandexDevice | null>(null);
   const [selectedLightDevice, setSelectedLightDevice] = useState<YandexDevice | null>(null);
+  const [selectedLightGroup, setSelectedLightGroup] = useState<YandexGroup | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   // Вспомогательные функции для работы с localStorage с учетом householdId
@@ -323,6 +325,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedLightDevice(null);
   }, []);
 
+  const handleOpenGroupLightSettings = useCallback((group: YandexGroup) => {
+    setSelectedLightGroup(group);
+  }, []);
+
+  const handleCloseLightGroupSettings = useCallback(() => {
+    setSelectedLightGroup(null);
+  }, []);
+
   const handleApplyLightBrightness = useCallback(async (settings: {
     brightness?: number;
     hsv?: { h: number; s: number; v: number };
@@ -374,6 +384,68 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
     // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedLightDevice, onSetDeviceMode]);
+
+  const handleApplyGroupLightBrightness = useCallback(async (settings: {
+    brightness?: number;
+    hsv?: { h: number; s: number; v: number };
+    rgb?: number;
+    temperature_k?: number;
+  }) => {
+    if (!selectedLightGroup) return;
+
+    // Получаем все устройства в группе
+    const groupDevices = data.devices.filter(d => selectedLightGroup.devices.includes(d.id));
+
+    if (groupDevices.length === 0) return;
+
+    // Отправляем одинаковые настройки для всех устройств в группе
+    const updatePromises = groupDevices.map(async (device) => {
+      const actions: any[] = [];
+
+      // Добавляем яркость если есть
+      if (settings.brightness !== undefined) {
+        actions.push({
+          instance: 'brightness',
+          value: settings.brightness.toString(),
+          type: 'devices.capabilities.range'
+        });
+      }
+
+      // Добавляем HSV цвет если есть
+      if (settings.hsv) {
+        actions.push({
+          instance: 'hsv',
+          value: settings.hsv,
+          type: 'devices.capabilities.color_setting'
+        });
+      }
+
+      // Добавляем RGB цвет если есть
+      if (settings.rgb !== undefined) {
+        actions.push({
+          instance: 'rgb',
+          value: settings.rgb,
+          type: 'devices.capabilities.color_setting'
+        });
+      }
+
+      // Добавляем температуру света если есть
+      if (settings.temperature_k !== undefined) {
+        actions.push({
+          instance: 'temperature_k',
+          value: settings.temperature_k.toString(),
+          type: 'devices.capabilities.color_setting'
+        });
+      }
+
+      if (actions.length > 0) {
+        await onSetDeviceMode(device.id, actions, true); // Включаем устройство при применении
+      }
+    });
+
+    await Promise.all(updatePromises);
+    // Модальное окно остается открытым при нажатии "Применить"
+  }, [selectedLightGroup, data.devices, onSetDeviceMode]);
 
   // Автоматическое сворачивание блока "Сценарии", если он пуст
   useEffect(() => {
@@ -618,6 +690,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           handleOpenThermostatSettings(device);
                         }
                       }}
+                      onOpenGroupSettings={handleOpenGroupLightSettings}
                     />
                   ))}
                 </div>
@@ -818,6 +891,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           isOpen={!!selectedLightDevice}
           onClose={handleCloseLightSettings}
           onApply={handleApplyLightBrightness}
+        />
+      )}
+
+      {/* Light Brightness Settings Modal for Group */}
+      {selectedLightGroup && (
+        <GroupLightSettingsModal
+          group={selectedLightGroup}
+          devices={data.devices}
+          isOpen={!!selectedLightGroup}
+          onClose={handleCloseLightGroupSettings}
+          onApply={handleApplyGroupLightBrightness}
         />
       )}
 	  
