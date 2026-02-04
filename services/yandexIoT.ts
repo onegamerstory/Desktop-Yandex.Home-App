@@ -1,4 +1,4 @@
-import { YandexUserInfoResponse, YandexDevice, YandexRoom } from '../types';
+import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexGroup } from '../types';
 
 // Используем глобально объявленный 'api'
 const yandexApi = window.api;
@@ -583,10 +583,56 @@ const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUse
         return room;
     });
 
+    // Создаем мок-группы устройств
+    const existingGroupIds = new Set(data.groups.map(g => g.id));
+    const mockGroups = [];
+
+    // Группа 1: Группа лампочек (если есть лампочки в мок-устройствах)
+    if (!existingGroupIds.has('GROUP_LIGHTS')) {
+        const lightDevices = [...data.devices, ...mockDevices].filter(d => d.type.startsWith('devices.types.light'));
+        if (lightDevices.length > 0) {
+            mockGroups.push({
+                id: 'GROUP_LIGHTS',
+                name: 'Лампочки',
+                household_id: firstHousehold.id,
+                devices: lightDevices.map(d => d.id),
+                capabilities: [
+                    {
+                        type: 'devices.capabilities.on_off',
+                        retrievable: true,
+                        reportable: true,
+                        state: {
+                            instance: 'on',
+                            value: false
+                        }
+                    }
+                ]
+            } as any);
+        }
+    }
+
+    // Группа 2: Группа сенсоров (если есть сенсоры)
+    if (!existingGroupIds.has('GROUP_SENSORS')) {
+        const sensorDevices = [...data.devices, ...mockDevices].filter(d => 
+            d.properties && d.properties.length > 0 && 
+            d.type.includes('sensor') || d.type.includes('meter')
+        );
+        if (sensorDevices.length > 0) {
+            mockGroups.push({
+                id: 'GROUP_SENSORS',
+                name: 'Датчики',
+                household_id: firstHousehold.id,
+                devices: sensorDevices.map(d => d.id),
+                capabilities: []
+            } as any);
+        }
+    }
+
     return {
         ...data,
         devices: updatedDevices,
         rooms: updatedRooms,
+        groups: [...data.groups, ...mockGroups],
     };
 };
 
@@ -666,6 +712,16 @@ export const setDeviceMode = async (token: string, deviceId: string, modeActions
         console.log('Режим устройства установлен успешно.');
     } catch (error) {
         console.error('Ошибка при установке режима устройства через IPC:', error);
+        throw error;
+    }
+};
+
+export const toggleGroup = async (token: string, groupId: string, newState: boolean): Promise<void> => {
+    try {
+        await yandexApi.toggleGroup(token, groupId, newState);
+        console.log('Группа переключена успешно.');
+    } catch (error) {
+        console.error('Ошибка при переключении группы через IPC:', error);
         throw error;
     }
 };

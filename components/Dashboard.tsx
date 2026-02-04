@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice } from '../types';
 import { ScenarioCard } from './ScenarioCard';
 import { DeviceCard } from './DeviceCard';
+import { GroupCard } from './GroupCard';
 import { ThermostatSettingsModal } from './ThermostatSettingsModal';
 import { BrightnessSettingsModal } from './BrightnessSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
@@ -17,6 +18,7 @@ interface DashboardProps {
   onLogout: () => void;
   onExecuteScenario: (id: string) => Promise<void>;
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
+  onToggleGroup: (id: string, currentState: boolean) => Promise<void>;
   onSetDeviceMode: (deviceId: string, modeActions: Array<{ instance: string; value: string }>, turnOn?: boolean) => Promise<void>;
   onRefresh: () => void;
   isRefreshing: boolean;
@@ -36,6 +38,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onLogout,
   onExecuteScenario,
   onToggleDevice,
+  onToggleGroup,
   onSetDeviceMode,
   onRefresh,
   isRefreshing,
@@ -99,6 +102,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isScenariosCollapsed, setIsScenariosCollapsed] = useState(() => 
     loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false)
   );
+  const [isGroupsCollapsed, setIsGroupsCollapsed] = useState(() => 
+    loadCollapseState('dashboard:groupsCollapsed', activeHouseholdId, false)
+  );
   const [isDevicesCollapsed, setIsDevicesCollapsed] = useState(() => 
     loadCollapseState('dashboard:devicesCollapsed', activeHouseholdId, false)
   );
@@ -112,6 +118,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Обновляем состояние вкладок при переключении дома
   useEffect(() => {
     setIsScenariosCollapsed(loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false));
+    setIsGroupsCollapsed(loadCollapseState('dashboard:groupsCollapsed', activeHouseholdId, false));
     setIsDevicesCollapsed(loadCollapseState('dashboard:devicesCollapsed', activeHouseholdId, false));
     setCollapsedRooms(loadCollapsedRooms(activeHouseholdId));
     setIsUnassignedDevicesCollapsed(loadCollapseState('dashboard:unassignedDevicesCollapsed', activeHouseholdId, false));
@@ -121,6 +128,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const newValue = !isScenariosCollapsed;
     setIsScenariosCollapsed(newValue);
     saveCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, newValue);
+  };
+
+  const toggleGroups = () => {
+    const newValue = !isGroupsCollapsed;
+    setIsGroupsCollapsed(newValue);
+    saveCollapseState('dashboard:groupsCollapsed', activeHouseholdId, newValue);
   };
 
   const toggleDevices = () => {
@@ -164,6 +177,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (!currentHousehold) return data.rooms;
     return data.rooms.filter(room => room.household_id === currentHousehold.id);
   }, [data.rooms, currentHousehold]);
+
+  const groupsForHome = useMemo(() => {
+    if (!currentHousehold) return data.groups;
+    return data.groups.filter(group => group.household_id === currentHousehold.id);
+  }, [data.groups, currentHousehold]);
 
   const roomIdsForHome = useMemo(() => new Set(roomsForHome.map(r => r.id)), [roomsForHome]);
 
@@ -549,6 +567,57 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       onExecute={onExecuteScenario} 
                       isFavorite={favoriteScenarioIds.includes(scenario.id)}
                       onToggleFavorite={onToggleScenarioFavorite}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* Groups Section */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={toggleGroups}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              {isGroupsCollapsed ? (
+                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              )}
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Группы</h2>
+            </button>
+            <span className="text-sm text-slate-600 dark:text-secondary bg-white dark:bg-surface px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">
+              {groupsForHome.length} групп
+            </span>
+          </div>
+
+          {!isGroupsCollapsed && (
+            <>
+              {groupsForHome.length === 0 ? (
+                 <div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl bg-gray-50 dark:bg-surface/30">
+                    <p className="text-slate-600 dark:text-slate-400">У вас нет групп устройств.</p>
+                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {groupsForHome.map(group => (
+                    <GroupCard
+                      key={group.id}
+                      group={group}
+                      devices={devicesForHome}
+                      onToggleGroup={onToggleGroup}
+                      onToggleDevice={onToggleDevice}
+                      favoriteDeviceIds={favoriteDeviceIds}
+                      onToggleDeviceFavorite={onToggleDeviceFavorite}
+                      onOpenSettings={(device) => {
+                        if (device.type === 'devices.types.light') {
+                          handleOpenLightSettings(device);
+                        } else {
+                          handleOpenThermostatSettings(device);
+                        }
+                      }}
                     />
                   ))}
                 </div>

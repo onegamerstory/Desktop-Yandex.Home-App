@@ -66,6 +66,14 @@ export interface YandexDevice {
   properties?: YandexProperty[];
 }
 
+export interface YandexGroup {
+  id: string;
+  name: string;
+  household_id: string;
+  devices: string[];
+  capabilities: YandexCapability[];
+}
+
 export interface YandexRoom {
   id: string;
   name: string;
@@ -83,7 +91,7 @@ export interface YandexUserInfoResponse {
   status: string;
   request_id: string;
   rooms: YandexRoom[];
-  groups: unknown[];
+  groups: YandexGroup[];
   devices: YandexDevice[];
   scenarios: YandexScenario[];
   households: YandexHousehold[];

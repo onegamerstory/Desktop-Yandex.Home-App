@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
-import { fetchUserInfo, executeScenario, toggleDevice, setDeviceMode } from './services/yandexIoT';
+import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
 import { formatSensorValue } from './constants';
 import { AlertCircle, X } from 'lucide-react';
@@ -268,7 +268,28 @@ function App() {
           	throw err; // Пробрасываем ошибку для обработки, например, в трее
       	}
   	}, [token, userData, refreshDashboardData, stableSortData, showNotification]);
+	// Обработчик переключения группы
+	const handleToggleGroup = useCallback(async (groupId: string, currentState: boolean) => {
+		if (!token || !userData) return;
+		
+		const newState = !currentState;
 
+		try {
+			// 1. Выполняем API-запрос на переключение группы
+			await toggleGroup(token, groupId, newState);
+			
+			// 2. Запускаем обновление для синхронизации
+			refreshDashboardData(token);
+			showNotification('Группа успешно переключена', 'success');
+		} catch (err) {
+			if (err instanceof Error) {
+				showNotification(`Ошибка: ${err.message}`, 'error');
+			} else {
+				showNotification('Не удалось переключить группу', 'error');
+			}
+			throw err;
+		}
+	}, [token, userData, refreshDashboardData, showNotification]);
 	// Обработчик запуска сценария
  	const handleExecuteScenario = useCallback(async (scenarioId: string) => {
    		if (!token) return;
@@ -560,6 +581,7 @@ useEffect(() => {
           onLogout={handleLogout} 
           onExecuteScenario={handleExecuteScenario} 
           onToggleDevice={handleToggleDevice}
+          onToggleGroup={handleToggleGroup}
           onSetDeviceMode={handleSetDeviceMode}
 		      onRefresh={() => token && refreshDashboardData(token)}
           isRefreshing={isRefreshing}

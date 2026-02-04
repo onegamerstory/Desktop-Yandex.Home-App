@@ -233,7 +233,7 @@ if (!gotTheLock) {
 
     // Когда Electron готов
     app.whenReady().then(() => {
-        Menu.setApplicationMenu(null);
+        //Menu.setApplicationMenu(null);
 
         createWindow();
         createTray(); // Создаем Tray
@@ -265,6 +265,14 @@ if (!gotTheLock) {
         ipcMain.handle('yandex-api:setDeviceMode', async (event, token, deviceId, modeActions, turnOn) => {
             try {
                 return await yandexApi.setDeviceMode(token, deviceId, modeActions, turnOn);
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        });
+
+        ipcMain.handle('yandex-api:toggleGroup', async (event, token, groupId, newState) => {
+            try {
+                return await yandexApi.toggleGroup(token, groupId, newState);
             } catch (error) {
                 throw new Error(error.message);
             }

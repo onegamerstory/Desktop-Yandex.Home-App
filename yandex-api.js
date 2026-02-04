@@ -210,3 +210,40 @@ export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false
         throw error;
     }
 };
+
+// 5. Управление группой устройств (включение/выключение всех устройств в группе)
+export const toggleGroup = async (token, groupId, newState) => {
+    try {
+        // Сначала получаем информацию о группе, чтобы узнать ID устройств
+        const userInfo = await fetch(`${BASE_URL}/user/info`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            }
+        });
+
+        if (!userInfo.ok) {
+            throw new Error(`Не удалось получить информацию о пользователе: ${userInfo.status}`);
+        }
+
+        const userData = await userInfo.json();
+        const group = userData.groups?.find(g => g.id === groupId);
+
+        if (!group) {
+            throw new Error(`Группа не найдена: ${groupId}`);
+        }
+
+        if (!group.devices || group.devices.length === 0) {
+            throw new Error(`В группе нет устройств`);
+        }
+
+        // Переключаем каждое устройство в группе
+        const devicePromises = group.devices.map(deviceId => 
+            toggleDevice(token, deviceId, newState)
+        );
+
+        await Promise.all(devicePromises);
+    } catch (error) {
+        handleFetchError(error);
+        throw error;
+    }
+};
