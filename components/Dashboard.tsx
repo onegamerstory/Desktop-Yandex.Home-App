@@ -6,6 +6,7 @@ import { GroupCard } from './GroupCard';
 import { ThermostatSettingsModal } from './ThermostatSettingsModal';
 import { BrightnessSettingsModal } from './BrightnessSettingsModal';
 import { GroupLightSettingsModal } from './GroupLightSettingsModal';
+import { GroupThermostatSettingsModal } from './GroupThermostatSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -54,6 +55,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedThermostatDevice, setSelectedThermostatDevice] = useState<YandexDevice | null>(null);
   const [selectedLightDevice, setSelectedLightDevice] = useState<YandexDevice | null>(null);
   const [selectedLightGroup, setSelectedLightGroup] = useState<YandexGroup | null>(null);
+  const [selectedThermostatGroup, setSelectedThermostatGroup] = useState<YandexGroup | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   // Вспомогательные функции для работы с localStorage с учетом householdId
@@ -333,6 +335,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedLightGroup(null);
   }, []);
 
+  const handleOpenGroupThermostatSettings = useCallback((group: YandexGroup) => {
+    setSelectedThermostatGroup(group);
+  }, []);
+
+  const handleCloseThermostatGroupSettings = useCallback(() => {
+    setSelectedThermostatGroup(null);
+  }, []);
+
   const handleApplyLightBrightness = useCallback(async (settings: {
     brightness?: number;
     hsv?: { h: number; s: number; v: number };
@@ -446,6 +456,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
     await Promise.all(updatePromises);
     // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedLightGroup, data.devices, onSetDeviceMode]);
+
+  const handleApplyGroupThermostatSettings = useCallback(async (modeActions: Array<{ instance: string; value: string }>) => {
+    if (!selectedThermostatGroup) return;
+
+    // Получаем все устройства в группе
+    const groupDevices = data.devices.filter(d => selectedThermostatGroup.devices.includes(d.id));
+
+    if (groupDevices.length === 0) return;
+
+    // Отправляем одинаковые настройки для всех устройств в группе
+    const updatePromises = groupDevices.map(async (device) => {
+      if (modeActions.length > 0) {
+        await onSetDeviceMode(device.id, modeActions, true); // Включаем устройство при применении
+      }
+    });
+
+    await Promise.all(updatePromises);
+    // Модальное окно остается открытым при нажатии "Применить"
+  }, [selectedThermostatGroup, data.devices, onSetDeviceMode]);
 
   // Автоматическое сворачивание блока "Сценарии", если он пуст
   useEffect(() => {
@@ -690,7 +719,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           handleOpenThermostatSettings(device);
                         }
                       }}
-                      onOpenGroupSettings={handleOpenGroupLightSettings}
+                      onOpenGroupSettings={(group) => {
+                        // Check if group contains light or thermostat devices
+                        const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
+                        const isLightGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.light');
+                        const isThermostatGroup = groupDevices.length > 0 && groupDevices.every(d => 
+                          d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat'
+                        );
+                        
+                        if (isLightGroup) {
+                          handleOpenGroupLightSettings(group);
+                        } else if (isThermostatGroup) {
+                          handleOpenGroupThermostatSettings(group);
+                        }
+                      }}
                     />
                   ))}
                 </div>
@@ -902,6 +944,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           isOpen={!!selectedLightGroup}
           onClose={handleCloseLightGroupSettings}
           onApply={handleApplyGroupLightBrightness}
+        />
+      )}
+
+      {/* Thermostat Settings Modal for Group */}
+      {selectedThermostatGroup && (
+        <GroupThermostatSettingsModal
+          group={selectedThermostatGroup}
+          devices={data.devices}
+          isOpen={!!selectedThermostatGroup}
+          onClose={handleCloseThermostatGroupSettings}
+          onApply={handleApplyGroupThermostatSettings}
         />
       )}
 	  
