@@ -48,8 +48,8 @@ function App() {
 
 	// --- Уведомления ---
 	const showNotification = useCallback((message: string, type: 'error' | 'success' = 'error') => {
-	  setNotification({ message, type });
-	  setTimeout(() => setNotification(null), 5000); // Автоматическое скрытие
+	  setNotification({ message, type });
+	  setTimeout(() => setNotification(null), 3000); // Автоматическое скрытие через 3 секунды
 	}, []); // Зависимости не требуются
 
 	// --- Функция для обеспечения стабильного порядка элементов ---
@@ -309,13 +309,13 @@ function App() {
  	}, [token, refreshDashboardData, showNotification]);
 
 	// Обработчик установки режима устройства (для кондиционеров)
- 	const handleSetDeviceMode = useCallback(async (deviceId: string, modeActions: Array<{ instance: string; value: string }>, turnOn: boolean = false) => {
+ 	const handleSetDeviceMode = useCallback(async (deviceId: string, modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean = false) => {
    		if (!token) return;
    		try {
      			await setDeviceMode(token, deviceId, modeActions, turnOn);
      			showNotification('Настройки успешно применены', 'success');
 				// Обновляем данные для синхронизации состояния
-				refreshDashboardData(token); 
+				refreshDashboardData(token);
    		} catch (err) {
      			if (err instanceof Error) {
        				showNotification(err.message, 'error');

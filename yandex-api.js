@@ -134,10 +134,20 @@ export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false
     // [{ instance: "thermostat", value: "cool" }, { instance: "fan_speed", value: "auto" }] - mode
     // [{ instance: "brightness", value: "50", type: 'devices.capabilities.range' }] - range
     // [{ instance: "hsv", value: { h: 125, s: 25, v: 100 }, type: 'devices.capabilities.color_setting' }] - color
+    // [{ instance: "oscillation", value: true, type: 'devices.capabilities.toggle' }] - toggle
     // turnOn - опциональный параметр для включения устройства
 
-    // Корректно формируем actions для mode, range и color_setting
+    // Корректно формируем actions для mode, range, color_setting и toggle
     const actions = modeActions.map(action => {
+        if (action.type === 'devices.capabilities.toggle' || action.instance === 'oscillation') {
+            return {
+                type: 'devices.capabilities.toggle',
+                state: {
+                    instance: action.instance,
+                    value: typeof action.value === 'string' ? action.value === 'on' || action.value === 'true' : Boolean(action.value)
+                }
+            };
+        }
         if (action.type === 'devices.capabilities.color_setting' || action.instance === 'hsv' || action.instance === 'rgb' || action.instance === 'temperature_k') {
             return {
                 type: 'devices.capabilities.color_setting',

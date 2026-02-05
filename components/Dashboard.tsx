@@ -7,6 +7,8 @@ import { ThermostatSettingsModal } from './ThermostatSettingsModal';
 import { BrightnessSettingsModal } from './BrightnessSettingsModal';
 import { GroupLightSettingsModal } from './GroupLightSettingsModal';
 import { GroupThermostatSettingsModal } from './GroupThermostatSettingsModal';
+import { FanSettingsModal } from './FanSettingsModal';
+import { GroupFanSettingsModal } from './GroupFanSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -21,7 +23,7 @@ interface DashboardProps {
   onExecuteScenario: (id: string) => Promise<void>;
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
   onToggleGroup: (id: string, currentState: boolean) => Promise<void>;
-  onSetDeviceMode: (deviceId: string, modeActions: Array<{ instance: string; value: string }>, turnOn?: boolean) => Promise<void>;
+  onSetDeviceMode: (deviceId: string, modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn?: boolean) => Promise<void>;
   onRefresh: () => void;
   isRefreshing: boolean;
   favoriteDeviceIds: string[];
@@ -54,8 +56,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedThermostatDevice, setSelectedThermostatDevice] = useState<YandexDevice | null>(null);
   const [selectedLightDevice, setSelectedLightDevice] = useState<YandexDevice | null>(null);
+  const [selectedFanDevice, setSelectedFanDevice] = useState<YandexDevice | null>(null);
   const [selectedLightGroup, setSelectedLightGroup] = useState<YandexGroup | null>(null);
   const [selectedThermostatGroup, setSelectedThermostatGroup] = useState<YandexGroup | null>(null);
+  const [selectedFanGroup, setSelectedFanGroup] = useState<YandexGroup | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   // Вспомогательные функции для работы с localStorage с учетом householdId
@@ -147,7 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const toggleRoom = (roomId: string) => {
-    const newCollapsedRooms = new Set(collapsedRooms);
+    const newCollapsedRooms: Set<string> = new Set(collapsedRooms);
     if (newCollapsedRooms.has(roomId)) {
       newCollapsedRooms.delete(roomId);
     } else {
@@ -343,6 +347,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedThermostatGroup(null);
   }, []);
 
+  const handleOpenFanSettings = useCallback((device: YandexDevice) => {
+    setSelectedFanDevice(device);
+  }, []);
+
+  const handleCloseFanSettings = useCallback(() => {
+    setSelectedFanDevice(null);
+  }, []);
+
+  const handleOpenGroupFanSettings = useCallback((group: YandexGroup) => {
+    setSelectedFanGroup(group);
+  }, []);
+
+  const handleCloseFanGroupSettings = useCallback(() => {
+    setSelectedFanGroup(null);
+  }, []);
+
   const handleApplyLightBrightness = useCallback(async (settings: {
     brightness?: number;
     hsv?: { h: number; s: number; v: number };
@@ -475,6 +495,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
     await Promise.all(updatePromises);
     // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedThermostatGroup, data.devices, onSetDeviceMode]);
+
+  const handleApplyFanSettings = useCallback(async (modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean = false) => {
+    if (!selectedFanDevice) return;
+    await onSetDeviceMode(selectedFanDevice.id, modeActions, turnOn);
+  }, [selectedFanDevice, onSetDeviceMode]);
+
+  const handleApplyGroupFanSettings = useCallback(async (modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean = false) => {
+    if (!selectedFanGroup) return;
+
+    // Получаем все устройства в группе
+    const groupDevices = data.devices.filter(d => selectedFanGroup.devices.includes(d.id));
+
+    if (groupDevices.length === 0) return;
+
+    // Отправляем одинаковые настройки для всех устройств в группе
+    const updatePromises = groupDevices.map(async (device) => {
+      if (modeActions.length > 0) {
+        await onSetDeviceMode(device.id, modeActions, turnOn);
+      }
+    });
+
+    await Promise.all(updatePromises);
+  }, [selectedFanGroup, data.devices, onSetDeviceMode]);
 
   // Автоматическое сворачивание блока "Сценарии", если он пуст
   useEffect(() => {
@@ -621,6 +664,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 									onOpenSettings={(dev) => {
 										if (dev.type === 'devices.types.light') {
 											handleOpenLightSettings(dev);
+										} else if (dev.type === 'devices.types.ventilation.fan') {
+											handleOpenFanSettings(dev);
 										} else {
 											handleOpenThermostatSettings(dev);
 										}
@@ -715,22 +760,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       onOpenSettings={(device) => {
                         if (device.type === 'devices.types.light') {
                           handleOpenLightSettings(device);
+                        } else if (device.type === 'devices.types.ventilation.fan') {
+                          handleOpenFanSettings(device);
                         } else {
                           handleOpenThermostatSettings(device);
                         }
                       }}
                       onOpenGroupSettings={(group) => {
-                        // Check if group contains light or thermostat devices
+                        // Check if group contains light, thermostat, or fan devices
                         const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
                         const isLightGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.light');
                         const isThermostatGroup = groupDevices.length > 0 && groupDevices.every(d => 
                           d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat'
                         );
+                        const isFanGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.ventilation.fan');
                         
                         if (isLightGroup) {
                           handleOpenGroupLightSettings(group);
                         } else if (isThermostatGroup) {
                           handleOpenGroupThermostatSettings(group);
+                        } else if (isFanGroup) {
+                          handleOpenGroupFanSettings(group);
                         }
                       }}
                     />
@@ -771,6 +821,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             onOpenSettings={(dev) => {
                               if (dev.type === 'devices.types.light') {
                                 handleOpenLightSettings(dev);
+                              } else if (dev.type === 'devices.types.ventilation.fan') {
+                                handleOpenFanSettings(dev);
                               } else {
                                 handleOpenThermostatSettings(dev);
                               }
@@ -814,6 +866,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                           onOpenSettings={(device) => {
                                             if (device.type === 'devices.types.light') {
                                               handleOpenLightSettings(device);
+                                            } else if (device.type === 'devices.types.ventilation.fan') {
+                                              handleOpenFanSettings(device);
                                             } else {
                                               handleOpenThermostatSettings(device);
                                             }
@@ -861,6 +915,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                       onOpenSettings={(device) => {
                                         if (device.type === 'devices.types.light') {
                                           handleOpenLightSettings(device);
+                                        } else if (device.type === 'devices.types.ventilation.fan') {
+                                          handleOpenFanSettings(device);
                                         } else {
                                           handleOpenThermostatSettings(device);
                                         }
@@ -955,6 +1011,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
           isOpen={!!selectedThermostatGroup}
           onClose={handleCloseThermostatGroupSettings}
           onApply={handleApplyGroupThermostatSettings}
+        />
+      )}
+
+      {/* Fan Settings Modal */}
+      {selectedFanDevice && (
+        <FanSettingsModal
+          device={selectedFanDevice}
+          isOpen={!!selectedFanDevice}
+          onClose={handleCloseFanSettings}
+          onApply={handleApplyFanSettings}
+        />
+      )}
+
+      {/* Fan Settings Modal for Group */}
+      {selectedFanGroup && (
+        <GroupFanSettingsModal
+          group={selectedFanGroup}
+          devices={data.devices}
+          isOpen={!!selectedFanGroup}
+          onClose={handleCloseFanGroupSettings}
+          onApply={handleApplyGroupFanSettings}
         />
       )}
 	  

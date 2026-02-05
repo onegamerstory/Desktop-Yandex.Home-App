@@ -44,6 +44,11 @@ export const GroupCard: React.FC<GroupCardProps> = ({
     );
   }, [groupDevices]);
 
+  // Проверяем, является ли группа группой вентиляторов
+  const isFanGroup = useMemo(() => {
+    return groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.ventilation.fan');
+  }, [groupDevices]);
+
   // Определяем состояние группы: ON если все устройства включены, OFF если все выключены, иначе смешанное
   const groupIsOn = useMemo(() => {
     if (groupDevices.length === 0) return false;
@@ -119,6 +124,15 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                 onClick={() => onOpenGroupSettings(group)}
                 className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
                 title="Настройки климата группы"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            )}
+            {isFanGroup && onOpenGroupSettings && (
+              <button
+                onClick={() => onOpenGroupSettings(group)}
+                className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
+                title="Настройки вентилятора группы"
               >
                 <Settings className="w-5 h-5" />
               </button>
