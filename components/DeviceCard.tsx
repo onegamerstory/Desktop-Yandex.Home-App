@@ -14,8 +14,8 @@ interface DeviceCardProps {
 export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings }) => {
   const [loading, setLoading] = useState(false);
 
-  // Проверяем, является ли устройство кондиционером
-  const isThermostat = device.type === 'devices.types.thermostat.ac';
+  // Проверяем, является ли устройство кондиционером или термостатом
+  const isThermostat = device.type === 'devices.types.thermostat.ac' || device.type === 'devices.types.thermostat';
   
   // Проверяем, является ли устройство лампочкой (поддерживаем все типы: light, light.lamp, light.ceiling, light.strip и т.д.)
   const isLight = device.type.startsWith('devices.types.light');
@@ -145,7 +145,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
               onOpenSettings(device);
           }}
           className="p-1 rounded-full transition-all duration-200 cursor-pointer text-gray-400 dark:text-slate-500 opacity-50 hover:opacity-100 hover:text-slate-900 dark:hover:text-white"
-          title={isThermostat ? "Открыть настройки кондиционера" : "Открыть настройки яркости"}
+          title={isThermostat ? "Открыть настройки климата" : "Открыть настройки яркости"}
         >
           <Settings className="w-4 h-4" />
         </div>
