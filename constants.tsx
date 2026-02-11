@@ -213,3 +213,71 @@ export const isLightDevice = (deviceType: string): boolean => {
 export const isLightGroup = (devices: Array<{ type: string }>): boolean => {
     return devices.length > 0 && devices.every(d => isLightDevice(d.type));
 };
+
+/**
+ * Formats sensor values (temperature and humidity) for tray display
+ * Returns a compact string suitable for system tray menu
+ * @param device - The Yandex device containing properties
+ * @returns Formatted sensor value string (e.g., "24.5°C 65%") or null if no sensor data found
+ */
+export const formatSensorValueForTray = (device: { properties?: Array<{
+    type?: string;
+    parameters?: {
+        instance?: string;
+        unit?: string;
+        events?: Array<{ value: string; name: string }>;
+    };
+    state?: {
+        instance?: string;
+        value?: unknown;
+        unit?: string;
+    };
+}> }): string | null => {
+    if (!device.properties || device.properties.length === 0) {
+        return null;
+    }
+
+    // Extract temperature property
+    const temperatureProperty = device.properties.find(prop => {
+        const anyProp = prop as any;
+        const type: string | undefined = anyProp?.type;
+        const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+        return type === 'devices.properties.float' && instance === 'temperature';
+    }) as any | undefined;
+
+    // Extract humidity property
+    const humidityProperty = device.properties.find(prop => {
+        const anyProp = prop as any;
+        const type: string | undefined = anyProp?.type;
+        const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+        return type === 'devices.properties.float' && instance === 'humidity';
+    }) as any | undefined;
+
+    // Get temperature value and unit
+    const temperatureValue: number | null = temperatureProperty?.state?.value ?? null;
+    const temperatureUnit = temperatureProperty?.parameters?.unit 
+        ? localizeUnit(temperatureProperty.parameters.unit) 
+        : temperatureProperty?.state?.unit 
+            ? localizeUnit(temperatureProperty.state.unit)
+            : '°C';
+
+    // Get humidity value and unit
+    const humidityValue: number | null = humidityProperty?.state?.value ?? null;
+    const humidityUnit = humidityProperty?.parameters?.unit 
+        ? localizeUnit(humidityProperty.parameters.unit)
+        : humidityProperty?.state?.unit 
+            ? localizeUnit(humidityProperty.state.unit)
+            : '%';
+
+    // Build the output string
+    const parts: string[] = [];
+    if (temperatureValue !== null) {
+        parts.push(`${temperatureValue}${temperatureUnit}`);
+    }
+    if (humidityValue !== null) {
+        parts.push(`${humidityValue}${humidityUnit}`);
+    }
+
+    // Return null if no sensor values found, otherwise return the formatted string
+    return parts.length > 0 ? parts.join(' ') : null;
+};

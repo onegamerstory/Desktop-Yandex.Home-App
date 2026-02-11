@@ -3,7 +3,7 @@ import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
 import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
-import { formatSensorValue } from './constants';
+import { formatSensorValue, formatSensorValueForTray } from './constants';
 import { AlertCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -437,7 +437,7 @@ const getTrayMenuItems = useCallback((
             // Calculate sensor value for sensor/smart_meter devices
             let sensorValue: string | null = null;
             if (isSensorOrMeter && !isToggleable) {
-                sensorValue = formatSensorValue(device);
+                sensorValue = formatSensorValueForTray(device);
             }
             
             return {
@@ -522,8 +522,8 @@ useEffect(() => {
 			return;
 		}
 
-		// Интервал синхронизации: 30 секунд
-		const POLLING_INTERVAL = 30000; // 30 секунд
+		// Интервал синхронизации: 120 секунд
+		const POLLING_INTERVAL = 120000; // 120 секунд
 
 		const pollingInterval = setInterval(() => {
 			// Тихая синхронизация без уведомлений и индикатора загрузки
