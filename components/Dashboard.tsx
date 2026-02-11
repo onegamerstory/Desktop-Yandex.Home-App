@@ -11,6 +11,7 @@ import { FanSettingsModal } from './FanSettingsModal';
 import { GroupFanSettingsModal } from './GroupFanSettingsModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { isLightDevice, isLightGroup } from '../constants';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
 
@@ -662,7 +663,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 									isFavorite={true} 
 									onToggleFavorite={onToggleDeviceFavorite}
 									onOpenSettings={(dev) => {
-										if (dev.type === 'devices.types.light') {
+										if (isLightDevice(dev.type)) {
 											handleOpenLightSettings(dev);
 										} else if (dev.type === 'devices.types.ventilation.fan') {
 											handleOpenFanSettings(dev);
@@ -758,7 +759,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       favoriteDeviceIds={favoriteDeviceIds}
                       onToggleDeviceFavorite={onToggleDeviceFavorite}
                       onOpenSettings={(device) => {
-                        if (device.type === 'devices.types.light') {
+                        if (isLightDevice(device.type)) {
                           handleOpenLightSettings(device);
                         } else if (device.type === 'devices.types.ventilation.fan') {
                           handleOpenFanSettings(device);
@@ -769,13 +770,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       onOpenGroupSettings={(group) => {
                         // Check if group contains light, thermostat, or fan devices
                         const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
-                        const isLightGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.light');
+                        const isLightGroupCheck = isLightGroup(groupDevices);
                         const isThermostatGroup = groupDevices.length > 0 && groupDevices.every(d => 
                           d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat'
                         );
                         const isFanGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.ventilation.fan');
                         
-                        if (isLightGroup) {
+                        if (isLightGroupCheck) {
                           handleOpenGroupLightSettings(group);
                         } else if (isThermostatGroup) {
                           handleOpenGroupThermostatSettings(group);
@@ -819,7 +820,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             isFavorite={favoriteDeviceIds.includes(device.id)} 
                             onToggleFavorite={onToggleDeviceFavorite}
                             onOpenSettings={(dev) => {
-                              if (dev.type === 'devices.types.light') {
+                              if (isLightDevice(dev.type)) {
                                 handleOpenLightSettings(dev);
                               } else if (dev.type === 'devices.types.ventilation.fan') {
                                 handleOpenFanSettings(dev);
@@ -864,7 +865,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                           isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                           onToggleFavorite={onToggleDeviceFavorite}
                                           onOpenSettings={(device) => {
-                                            if (device.type === 'devices.types.light') {
+                                            if (isLightDevice(device.type)) {
                                               handleOpenLightSettings(device);
                                             } else if (device.type === 'devices.types.ventilation.fan') {
                                               handleOpenFanSettings(device);
@@ -913,7 +914,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                       isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                       onToggleFavorite={onToggleDeviceFavorite}
                                       onOpenSettings={(device) => {
-                                        if (device.type === 'devices.types.light') {
+                                        if (isLightDevice(device.type)) {
                                           handleOpenLightSettings(device);
                                         } else if (device.type === 'devices.types.ventilation.fan') {
                                           handleOpenFanSettings(device);

@@ -194,3 +194,22 @@ export const formatSensorValue = (device: { properties?: Array<{
 
     return null;
 }
+
+/**
+ * Checks if a device type is a light device
+ * Supports all light types: devices.types.light, devices.types.light.ceiling, devices.types.light.lamp, devices.types.light.strip, etc.
+ * @param deviceType - The device type string
+ * @returns true if the device is a light type
+ */
+export const isLightDevice = (deviceType: string): boolean => {
+    return deviceType.startsWith('devices.types.light');
+};
+
+/**
+ * Checks if a group contains only light devices
+ * @param devices - Array of YandexDevice objects in the group
+ * @returns true if all devices in the group are light types
+ */
+export const isLightGroup = (devices: Array<{ type: string }>): boolean => {
+    return devices.length > 0 && devices.every(d => isLightDevice(d.type));
+};

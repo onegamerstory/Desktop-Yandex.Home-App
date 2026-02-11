@@ -34,7 +34,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
                 device.type.toLowerCase().includes('hub') ||
                 device.type.toLowerCase().includes('other');
 
-  // Sensor detection: ищем свойство с текущим значением
+  // Sensor detection: ищем свойства с текущим значением
   const sensorProperty = (device.properties ?? []).find(prop => {
     const anyProp = prop as any;
     const type: string | undefined = anyProp?.type;
@@ -45,6 +45,37 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
       typeof instance === 'string'
     );
   }) as any | undefined;
+
+  // Extract temperature and humidity properties separately
+  const temperatureProperty = (device.properties ?? []).find(prop => {
+    const anyProp = prop as any;
+    const type: string | undefined = anyProp?.type;
+    const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+    return type === 'devices.properties.float' && instance === 'temperature';
+  }) as any | undefined;
+
+  const humidityProperty = (device.properties ?? []).find(prop => {
+    const anyProp = prop as any;
+    const type: string | undefined = anyProp?.type;
+    const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+    return type === 'devices.properties.float' && instance === 'humidity';
+  }) as any | undefined;
+
+  // Get temperature value and unit
+  const temperatureValue: number | null = temperatureProperty?.state?.value ?? null;
+  const temperatureUnit = temperatureProperty?.parameters?.unit 
+    ? localizeUnit(temperatureProperty.parameters.unit) 
+    : temperatureProperty?.state?.unit 
+      ? localizeUnit(temperatureProperty.state.unit)
+      : ' °C';
+
+  // Get humidity value and unit
+  const humidityValue: number | null = humidityProperty?.state?.value ?? null;
+  const humidityUnit = humidityProperty?.parameters?.unit 
+    ? localizeUnit(humidityProperty.parameters.unit)
+    : humidityProperty?.state?.unit 
+      ? localizeUnit(humidityProperty.state.unit)
+      : ' %';
 
   const isSensor = !isToggleable && !!sensorProperty;
 
@@ -201,15 +232,28 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
         <p className="font-medium text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">
           {device.name}
         </p>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-          {loading
-            ? 'Обновление...'
-            : isSensor && formattedSensorValue
-            ? formattedSensorValue
-            : isOn
-              ? 'Включено'
-              : 'Отключено'}
-        </p>
+        <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 space-y-1">
+          {loading ? (
+            <p>Обновление...</p>
+          ) : temperatureValue !== null || humidityValue !== null ? (
+            <>
+              {temperatureValue !== null && (
+                <p>🌡️ Температура: <span className="font-medium text-slate-700 dark:text-slate-300">{temperatureValue}{temperatureUnit}</span></p>
+              )}
+              {humidityValue !== null && (
+                <p>💧 Влажность: <span className="font-medium text-slate-700 dark:text-slate-300">{humidityValue}{humidityUnit}</span></p>
+              )}
+            </>
+          ) : (
+            <p>
+              {isSensor && formattedSensorValue
+                ? formattedSensorValue
+                : isOn
+                  ? 'Включено'
+                  : 'Отключено'}
+            </p>
+          )}
+        </div>
       </div>
 	  
 	  <div className="flex justify-end">

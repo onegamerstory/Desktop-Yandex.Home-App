@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { YandexGroup, YandexDevice } from '../types';
 import { DeviceCard } from './DeviceCard';
 import { Loader2, Power, ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { isLightGroup } from '../constants';
 
 interface GroupCardProps {
   group: YandexGroup;
@@ -32,9 +33,9 @@ export const GroupCard: React.FC<GroupCardProps> = ({
     return devices.filter(d => group.devices.includes(d.id));
   }, [devices, group.devices]);
 
-  // Проверяем, является ли группа группой светильников
-  const isLightGroup = useMemo(() => {
-    return groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.light');
+  // Проверяем, является ли группа группой светильников (поддерживает все типы: light, light.ceiling, light.lamp, light.strip и т.д.)
+  const isLightGroupCheck = useMemo(() => {
+    return isLightGroup(groupDevices);
   }, [groupDevices]);
 
   // Проверяем, является ли группа группой терморегуляторов
@@ -110,7 +111,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
       {/* Тумблер вкл/выкл для группы */}
         {hasOnOffCapability && (
           <div className="flex items-center gap-2">
-            {isLightGroup && onOpenGroupSettings && (
+            {isLightGroupCheck && onOpenGroupSettings && (
               <button
                 onClick={() => onOpenGroupSettings(group)}
                 className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
