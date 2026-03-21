@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { YandexGroup, YandexDevice, YandexCapability } from '../types';
 import { X, Lightbulb, Palette, Thermometer } from 'lucide-react';
+import { hsvToRgb } from '../utils/colorConverter';
 
 interface GroupLightSettingsModalProps {
   group: YandexGroup;
@@ -128,8 +129,14 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
     }
 
     // Отправляем только выбранный режим: либо цвет, либо температуру
-    if (colorMode === 'color' && selectedColor && hsvCapability) {
-      settings.hsv = selectedColor.hsv;
+    if (colorMode === 'color' && selectedColor && (hsvCapability || rgbCapability)) {
+      // Если устройство поддерживает RGB, отправляем в RGB формате
+      if (rgbCapability) {
+        settings.rgb = hsvToRgb(selectedColor.hsv.h, selectedColor.hsv.s, selectedColor.hsv.v);
+      } else {
+        // Иначе отправляем в HSV формате
+        settings.hsv = selectedColor.hsv;
+      }
     } else if (colorMode === 'temperature' && temperature_k !== null && temperatureKRange) {
       // Инвертируем температуру: левое положение (холодный) = высокое значение K, правое (теплый) = низкое значение K
       settings.temperature_k = temperatureKRange.min + temperatureKRange.max - temperature_k;
@@ -239,10 +246,11 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           <div className="flex gap-2">
             <button
               onClick={() => setColorMode('color')}
+              disabled={!hsvCapability && !rgbCapability}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'color'
                   ? 'bg-purple-600 dark:bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
               <Palette className="w-4 h-4" />
@@ -250,10 +258,11 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
             </button>
             <button
               onClick={() => setColorMode('temperature')}
+              disabled={!temperatureCapability}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'temperature'
                   ? 'bg-purple-600 dark:bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
               <Thermometer className="w-4 h-4" />
