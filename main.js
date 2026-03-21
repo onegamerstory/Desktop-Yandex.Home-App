@@ -240,7 +240,17 @@ if (!gotTheLock) {
         
         ipcMain.handle('yandex-api:fetchUserInfo', async (event, token) => {
             try {
-                return await yandexApi.fetchUserInfo(token);
+                return await yandexApi.fetchUserInfo(token, (attempt, maxAttempts) => {
+                    // Отправляем событие о повторной попытке подключения в React приложение
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send('yandex-api:retry-attempt', {
+                            attempt,
+                            maxAttempts,
+                            message: `Попытка повторного подключения ${attempt} из ${maxAttempts}...`
+                        });
+                    }
+                    console.log(`Повторная попытка ${attempt}/${maxAttempts}...`);
+                });
             } catch (error) {
                 throw new Error(error.message); 
             }
@@ -280,7 +290,16 @@ if (!gotTheLock) {
 
         ipcMain.handle('yandex-api:fetchDevice', async (event, token, deviceId) => {
             try {
-                return await yandexApi.fetchDevice(token, deviceId);
+                return await yandexApi.fetchDevice(token, deviceId, (attempt, maxAttempts) => {
+                    // Отправляем событие о повторной попытке подключения в React приложение
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send('yandex-api:retry-attempt', {
+                            attempt,
+                            maxAttempts,
+                            message: `Попытка повторного подключения ${attempt} из ${maxAttempts}...`
+                        });
+                    }
+                });
             } catch (error) {
                 throw new Error(error.message);
             }

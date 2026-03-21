@@ -2,19 +2,79 @@
 
 const BASE_URL = 'https://api.iot.yandex.net/v1.0';
 
+// Константы для retry механизма
+const RETRY_CONFIG = {
+    MAX_ATTEMPTS: 5,
+    RETRY_DELAY_MS: 60000, // 60 секунд
+};
+
+// Вспомогательная функция для проверки ошибок сети
+const isNetworkError = (error) => {
+    return error.name === 'FetchError' || 
+           error.code === 'ENOTFOUND' || 
+           error.code === 'ECONNREFUSED' ||
+           error.code === 'ETIMEDOUT' ||
+           error.message?.includes('fetch failed') ||
+           error.message?.includes('network error') ||
+           error.message?.includes('Ошибка сети');
+};
+
 // Вспомогательная функция для обработки ошибок
 const handleFetchError = (error) => {
     // В Main Process нет CORS, так что ошибка "Failed to fetch"
     // будет означать реальную проблему с сетью (офлайн, DNS, firewall).
-    if (error.name === 'FetchError' || error.code === 'ENOTFOUND') {
+    if (isNetworkError(error)) {
         throw new Error('Ошибка сети. Проверьте подключение.');
     }
     throw error;
 };
 
+// Wrapper функция для retry механизма
+const withRetry = async (asyncFn, onRetryAttempt = null) => {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= RETRY_CONFIG.MAX_ATTEMPTS; attempt++) {
+        try {
+            return await asyncFn();
+        } catch (error) {
+            lastError = error;
+            
+            // Если это ошибка авторизации, не повторяем попытку
+            if (error.message?.includes('авторизац') || 
+                error.message?.includes('401') || 
+                error.message?.includes('403')) {
+                throw error;
+            }
+            
+            // Проверяем, является ли это ошибкой сети
+            if (!isNetworkError(error) && attempt < RETRY_CONFIG.MAX_ATTEMPTS) {
+                // Для других ошибок (не сетевых) не повторяем
+                throw error;
+            }
+            
+            if (attempt === RETRY_CONFIG.MAX_ATTEMPTS) {
+                // Это была последняя попытка
+                break;
+            }
+            
+            // Уведомляем о повторной попытке
+            if (onRetryAttempt) {
+                onRetryAttempt(attempt, RETRY_CONFIG.MAX_ATTEMPTS);
+            }
+            
+            console.log(`Попытка ${attempt} из ${RETRY_CONFIG.MAX_ATTEMPTS} не удалась. Повтор через ${RETRY_CONFIG.RETRY_DELAY_MS / 1000} сек...`, error);
+            
+            // Ждем перед следующей попыткой
+            await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY_MS));
+        }
+    }
+    
+    throw lastError;
+};
+
 // 1. Получение информации о пользователе
-export const fetchUserInfo = async (token) => {
-    try {
+export const fetchUserInfo = async (token, onRetryAttempt = null) => {
+    return withRetry(async () => {
         const response = await fetch(`${BASE_URL}/user/info`, {
             method: 'GET',
             headers: {
@@ -31,15 +91,12 @@ export const fetchUserInfo = async (token) => {
         }
 
         return await response.json();
-    } catch (error) {
-        handleFetchError(error);
-        throw error;
-    }
+    }, onRetryAttempt);
 };
 
 // 1.1 Получение информации об устройстве по ID
-export const fetchDevice = async (token, deviceId) => {
-    try {
+export const fetchDevice = async (token, deviceId, onRetryAttempt = null) => {
+    return withRetry(async () => {
         const response = await fetch(`${BASE_URL}/devices/${deviceId}`, {
             method: 'GET',
             headers: {
@@ -56,10 +113,7 @@ export const fetchDevice = async (token, deviceId) => {
         }
 
         return await response.json();
-    } catch (error) {
-        handleFetchError(error);
-        throw error;
-    }
+    }, onRetryAttempt);
 };
 
 // 2. Выполнение сценария

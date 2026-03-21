@@ -45,6 +45,9 @@ function App() {
   
   // Состояние автозапуска
   const [isAutostartEnabled, setIsAutostartEnabled] = useState<boolean>(false);
+  
+  // Состояние для отслеживания повторных попыток подключения
+  const [retryInfo, setRetryInfo] = useState<{attempt: number, maxAttempts: number, message: string} | null>(null);
 
 	// --- Уведомления ---
 	const showNotification = useCallback((message: string, type: 'error' | 'success' = 'error') => {
@@ -54,23 +57,22 @@ function App() {
 
 	// --- Функция для обеспечения стабильного порядка элементов ---
   const stableSortData = useCallback((data: YandexUserInfoResponse): YandexUserInfoResponse => {
-        // 1. Сортировка устройств по ID (для стабильности при переключении)
-        const sortedDevices: YandexDevice[] = [...data.devices].sort((a, b) => a.id.localeCompare(b.id));
+        // 1. Сортировка устройств по ID (для стабильности при переключении)
+        const sortedDevices: YandexDevice[] = [...data.devices].sort((a, b) => a.id.localeCompare(b.id));
 
-        // 2. Сортировка комнат по названию
-        const sortedRooms: YandexRoom[] = [...data.rooms].sort((a, b) => a.name.localeCompare(b.name));
+        // 2. Сортировка комнат по названию
+        const sortedRooms: YandexRoom[] = [...data.rooms].sort((a, b) => a.name.localeCompare(b.name));
 
-        // 3. Сортировка сценариев по названию
-        const sortedScenarios: YandexScenario[] = [...data.scenarios].sort((a, b) => a.name.localeCompare(b.name));
+        // 3. Сортировка сценариев по названию
+        const sortedScenarios: YandexScenario[] = [...data.scenarios].sort((a, b) => a.name.localeCompare(b.name));
 
-        return { 
-            ...data, 
-            devices: sortedDevices,
-            rooms: sortedRooms,
-            scenarios: sortedScenarios,
-        };
-    }, []);
-
+        return { 
+            ...data, 
+            devices: sortedDevices,
+            rooms: sortedRooms,
+            scenarios: sortedScenarios,
+        };
+    }, []);
 
 	// --- ФУНКЦИИ ДЕЙСТВИЙ ---
 
@@ -392,7 +394,24 @@ function App() {
 		checkToken();
   }, [loadData]); // Зависимость от loadData
 
-	// Обработчик переключения автозапуска
+	// --- 1.1 useEffect: Слушаем события повторных попыток подключения ---
+	useEffect(() => {
+		// Регистрируем слушатель для событий повторных попыток
+		if (!window.api?.onRetryAttempt) {
+			return;
+		}
+
+		const unsubscribe = window.api.onRetryAttempt((data: {attempt: number, maxAttempts: number, message: string}) => {
+			setRetryInfo(data);
+		});
+
+		// Очистка слушателя при размонтировании компонента
+		return () => {
+			if (unsubscribe) unsubscribe();
+		};
+	}, []);
+
+  // Обработчик переключения автозапуска
 	const handleToggleAutostart = useCallback(async () => {
 		try {
 			const newState = !isAutostartEnabled;
@@ -561,7 +580,15 @@ useEffect(() => {
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-600 dark:text-slate-400 animate-pulse">Загрузка данных...</p>
+            <p className="text-slate-600 dark:text-slate-400 animate-pulse">
+              {retryInfo ? retryInfo.message : 'Загрузка данных...'}
+            </p>
+            {retryInfo && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                Нет соединения. Приложение пытается подключиться...<br/>
+                Попытка {retryInfo.attempt} из {retryInfo.maxAttempts}
+              </p>
+            )}
           </div>
           <NotificationToast />
         </div>

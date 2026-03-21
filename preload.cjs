@@ -35,5 +35,14 @@ contextBridge.exposeInMainWorld('api', {
     removeTrayCommandListener: () => {
         // Очистка слушателей при размонтировании компонента App
         ipcRenderer.removeAllListeners('tray:execute-command');
+    },
+    
+    // Прослушивание событий повторных попыток подключения (retry)
+    onRetryAttempt: (callback) => {
+        ipcRenderer.on('yandex-api:retry-attempt', (event, data) => {
+            callback(data);
+        });
+        // Возвращаем функцию для отписки
+        return () => ipcRenderer.removeAllListeners('yandex-api:retry-attempt');
     }
 });

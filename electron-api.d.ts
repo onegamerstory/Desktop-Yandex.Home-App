@@ -19,6 +19,9 @@ export interface IYandexApi {
     sendFavoritesToTray: (favorites: TrayMenuItem[]) => void;
     onTrayCommand: (callback: (command: string, id: string, currentState?: boolean) => void) => void;
     removeTrayCommandListener: () => void;
+    
+    // Retry attempt event listener
+    onRetryAttempt: (callback: (data: {attempt: number, maxAttempts: number, message: string}) => void) => () => void;
 }
 
 declare global {
