@@ -10,7 +10,7 @@ import { GroupThermostatSettingsModal } from './GroupThermostatSettingsModal';
 import { FanSettingsModal } from './FanSettingsModal';
 import { GroupFanSettingsModal } from './GroupFanSettingsModal';
 import { InfoModal } from './InfoModal';
-import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power, Info } from 'lucide-react';
+import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Power, Info, Building2, Zap } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { isLightDevice, isLightGroup } from '../constants';
 import packageJson from '../package.json';
@@ -620,10 +620,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
+                <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-lg text-orange-600 dark:text-orange-400"><Building2 className="w-6 h-6"/></div>
+                <div>
+                    <p className="text-sm text-slate-600 dark:text-secondary">Домов</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{households.length}</p>
+                </div>
+            </div>
+            <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
                 <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400"><Layers className="w-6 h-6"/></div>
                 <div>
                     <p className="text-sm text-slate-600 dark:text-secondary">Комнат</p>
                     <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{roomsForHome.length}</p>
+                </div>
+            </div>
+            <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
+                <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg text-purple-600 dark:text-purple-400"><Zap className="w-6 h-6"/></div>
+                <div>
+                    <p className="text-sm text-slate-600 dark:text-secondary">Сценариев</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{activeScenarios.length}</p>
                 </div>
             </div>
             <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
@@ -804,7 +818,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Devices Section */}
         <section>
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center justify-between mb-6">
               <button
                 onClick={toggleDevices}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -816,6 +830,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 )}
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Устройства</h2>
               </button>
+              <span className="text-sm text-slate-600 dark:text-secondary bg-white dark:bg-surface px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">
+              {devicesForHome.length} устройств
+              </span>
             </div>
             
             {!isDevicesCollapsed && (
