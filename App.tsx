@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
+import { UpdateNotificationModal } from './components/UpdateNotificationModal';
 import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
 import { formatSensorValue, formatSensorValueForTray } from './constants';
 import { AlertCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
+import packageJson from './package.json';
 
 // Получаем доступ к IPC-мосту, предоставленному Electron preload скриптом
 const yandexApi = window.api; 
@@ -29,13 +31,53 @@ const setFavorites = (key: string, ids: string[]): void => {
     }
 };
 
+// --- Вспомогательная функция для сравнения версий ---
+const compareVersions = (v1: string, v2: string): number => {
+    const parts1 = v1.replace(/^v/, '').split('.').map(Number);
+    const parts2 = v2.replace(/^v/, '').split('.').map(Number);
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const p1 = parts1[i] || 0;
+      const p2 = parts2[i] || 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+};
+
+// --- Вспомогательная функция для проверки обновлений ---
+const checkForUpdates = async (): Promise<{latestVersion: string, releaseUrl: string, releaseDate: string} | null> => {
+    try {
+      const response = await fetch(
+        'https://api.github.com/repos/onegamerstory/Desktop-Yandex.Home-App/releases/latest'
+      );
+      if (!response.ok) {
+        throw new Error('Не удалось получить информацию о последней версии');
+      }
+      const data = await response.json();
+      const latestVersion = data.tag_name || null;
+      const currentVersion = packageJson.version;
+      
+      if (latestVersion && compareVersions(latestVersion, currentVersion) > 0) {
+        return {
+          latestVersion,
+          releaseUrl: data.html_url,
+          releaseDate: new Date(data.published_at).toLocaleDateString('ru-RU'),
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('Ошибка при проверке обновлений:', err);
+      return null;
+    }
+};
 function App() {
-  // --- Состояние приложения ---
-  const [appState, setAppState] = useState<AppState>(AppState.LOADING);
-  const [token, setToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<YandexUserInfoResponse | null>(null);
+  // --- Состояние приложения ---
+  const [appState, setAppState] = useState<AppState>(AppState.LOADING);
+  const [token, setToken] = useState<string | null>(null);
+  const [userData, setUserData] = useState<YandexUserInfoResponse | null>(null);
   const [activeHouseholdId, setActiveHouseholdId] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
+  const [errorMsg, setErrorMsg] = useState<string | undefined>(undefined);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -48,6 +90,10 @@ function App() {
   
   // Состояние для отслеживания повторных попыток подключения
   const [retryInfo, setRetryInfo] = useState<{attempt: number, maxAttempts: number, message: string} | null>(null);
+
+  // Состояние для уведомления об обновлении
+  const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
+  const [updateInfo, setUpdateInfo] = useState<{latestVersion: string, releaseUrl: string, releaseDate: string} | null>(null);
 
 	// --- Уведомления ---
 	const showNotification = useCallback((message: string, type: 'error' | 'success' = 'error') => {
@@ -383,6 +429,17 @@ function App() {
 			} catch (error) {
 				console.error('Ошибка при загрузке состояния автозапуска:', error);
 			}
+
+			// Проверяем наличие обновлений при запуске приложения
+			try {
+				const newUpdateInfo = await checkForUpdates();
+				if (newUpdateInfo) {
+					setUpdateInfo(newUpdateInfo);
+					setShowUpdateNotification(true);
+				}
+			} catch (error) {
+				console.error('Ошибка при проверке обновлений:', error);
+			}
 			
 			if (storedToken) {
 				setToken(storedToken);
@@ -412,9 +469,16 @@ function App() {
 	}, []);
 
   // Обработчик переключения автозапуска
+	// Create a mutable ref for the current autostart state to avoid stale closure issues
+	const autostartStateRef = useRef(isAutostartEnabled);
+	useEffect(() => {
+		autostartStateRef.current = isAutostartEnabled;
+	}, [isAutostartEnabled]);
+
 	const handleToggleAutostart = useCallback(async () => {
 		try {
-			const newState = !isAutostartEnabled;
+			// Use the ref to get the current state, avoiding stale closure issues
+			const newState = !autostartStateRef.current;
 			await yandexApi.setAutostartEnabled(newState);
 			setIsAutostartEnabled(newState);
 			showNotification(
@@ -427,7 +491,7 @@ function App() {
 			console.error('Ошибка при изменении автозапуска:', error);
 			showNotification('Не удалось изменить настройки автозапуска', 'error');
 		}
-	}, [isAutostartEnabled, showNotification]);
+	}, [showNotification]);
 
   
 // --- 2. Вспомогательная функция для подготовки данных для трея ---
@@ -619,6 +683,16 @@ useEffect(() => {
           isAutostartEnabled={isAutostartEnabled}
           onToggleAutostart={handleToggleAutostart}
         />
+        {updateInfo && (
+          <UpdateNotificationModal
+            isOpen={showUpdateNotification}
+            onClose={() => setShowUpdateNotification(false)}
+            currentVersion={packageJson.version}
+            latestVersion={updateInfo.latestVersion}
+            releaseUrl={updateInfo.releaseUrl}
+            releaseDate={updateInfo.releaseDate}
+          />
+        )}
         <NotificationToast />
       </ThemeProvider>
     );
