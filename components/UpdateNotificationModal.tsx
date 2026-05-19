@@ -61,7 +61,7 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
           {/* Update Description */}
           <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20 rounded-lg p-4">
             <p className="text-sm text-yellow-900 dark:text-yellow-400">
-              Доступна новая версия приложения. Рекомендуется обновиться для получения последних функций и исправлений безопасности.
+              Доступна новая версия приложения. Рекомендуется обновиться для получения последних функций и исправлений ошибок.
             </p>
           </div>
         </div>
