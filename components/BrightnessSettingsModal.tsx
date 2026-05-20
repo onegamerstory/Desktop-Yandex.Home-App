@@ -347,7 +347,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Температура света
-                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">({temperature_k}K)</span>
+                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">({temperatureKRange ? temperatureKRange.min + temperatureKRange.max - temperature_k : temperature_k}K)</span>
               </label>
               <div className="flex items-center gap-4">
                 <div className="text-xs text-slate-600 dark:text-slate-400 w-12">
