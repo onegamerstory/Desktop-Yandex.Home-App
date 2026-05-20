@@ -269,13 +269,13 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
             ? localizeUnit(humidityProperty.state.unit)
             : '%';
 
-    // Build the output string
+    // Build the output string with icons
     const parts: string[] = [];
     if (temperatureValue !== null) {
-        parts.push(`${temperatureValue}${temperatureUnit}`);
+        parts.push(`🌡️ ${temperatureValue}${temperatureUnit}`);
     }
     if (humidityValue !== null) {
-        parts.push(`${humidityValue}${humidityUnit}`);
+        parts.push(`💧 ${humidityValue}${humidityUnit}`);
     }
 
     // Return null if no sensor values found, otherwise return the formatted string

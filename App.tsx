@@ -558,13 +558,15 @@ const getTrayMenuItems = useCallback((
             const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
             const isToggleable = !!onOffCapability;
             
-            // Check if this is a sensor or smart meter device that should show sensor value
+            // Check if this is a sensor, smart meter, air conditioner, or kettle device
+            // These devices have temperature/humidity properties to display
             const deviceType = device.type.toLowerCase();
             const isSensorOrMeter = deviceType.includes('sensor') || deviceType.includes('smart_meter');
+            const isClimateDevice = deviceType.includes('thermostat') || deviceType.includes('kettle');
             
-            // Calculate sensor value for sensor/smart_meter devices
+            // Calculate sensor value for devices that have temperature/humidity properties
             let sensorValue: string | null = null;
-            if (isSensorOrMeter && !isToggleable) {
+            if ((isSensorOrMeter && !isToggleable) || isClimateDevice) {
                 sensorValue = formatSensorValueForTray(device);
             }
             
