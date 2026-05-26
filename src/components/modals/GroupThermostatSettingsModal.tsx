@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { YandexDevice, YandexCapability, YandexModeCapabilityParameters } from '../types';
+import { YandexGroup, YandexDevice, YandexCapability, YandexModeCapabilityParameters } from '../../types/index';
 import { 
   X, 
   Settings, 
@@ -20,15 +20,17 @@ import {
   MoveVertical
 } from 'lucide-react';
 
-interface ThermostatSettingsModalProps {
-  device: YandexDevice;
+interface GroupThermostatSettingsModalProps {
+  group: YandexGroup;
+  devices: YandexDevice[];
   isOpen: boolean;
   onClose: () => void;
   onApply: (modeActions: Array<{ instance: string; value: string }>, turnOn?: boolean) => Promise<void>;
 }
 
-export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = ({
-  device,
+export const GroupThermostatSettingsModal: React.FC<GroupThermostatSettingsModalProps> = ({
+  group,
+  devices,
   isOpen,
   onClose,
   onApply,
@@ -40,30 +42,31 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
   const [temperature, setTemperature] = useState<number | null>(null);
   const [temperatureRange, setTemperatureRange] = useState<{ min: number; max: number; precision: number } | null>(null);
 
+  // Получаем устройства, относящиеся к этой группе
+  const groupDevices = devices.filter(d => group.devices.includes(d.id));
+  const firstDevice = groupDevices.length > 0 ? groupDevices[0] : null;
+
   // Найти capability диапазона температуры
-  const rangeCapability = device.capabilities.find(
+  const rangeCapability = firstDevice?.capabilities.find(
     (cap) => cap.type === 'devices.capabilities.range' && (cap.parameters as any)?.instance === 'temperature'
   ) as YandexCapability & { parameters?: { instance: string; range: { min: number; max: number; precision: number } } };
 
   useEffect(() => {
     if (rangeCapability && rangeCapability.parameters && (rangeCapability.parameters as any).range) {
       setTemperatureRange((rangeCapability.parameters as any).range);
-      // Установить текущее значение температуры из state
-      if (rangeCapability.state && typeof rangeCapability.state.value === 'number') {
-        setTemperature(rangeCapability.state.value);
-      } else {
-        setTemperature((rangeCapability.parameters as any).range.min);
-      }
+      // Установить значение температуры на середину диапазона
+      const midValue = Math.round(((rangeCapability.parameters as any).range.min + (rangeCapability.parameters as any).range.max) / 2);
+      setTemperature(midValue);
     } else {
       setTemperatureRange(null);
       setTemperature(null);
     }
-  }, [rangeCapability, isOpen, device]);
+  }, [rangeCapability, isOpen, group]);
 
-  // Ищем все capabilities с типом 'devices.capabilities.mode'
-  const modeCapabilities = device.capabilities.filter(
+  // Получаем mode capabilities из первого устройства
+  const modeCapabilities = firstDevice?.capabilities.filter(
     (cap) => cap.type === 'devices.capabilities.mode'
-  ) as Array<YandexCapability & { parameters?: YandexModeCapabilityParameters }>;
+  ) as Array<YandexCapability & { parameters?: YandexModeCapabilityParameters }> || [];
 
   // Находим capability для каждого instance
   const findCapabilityByInstance = (instance: string) => {
@@ -92,7 +95,6 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
     if (!cap || !cap.parameters) return [];
     const params = cap.parameters as any;
     
-    // Проверяем, что parameters.modes существует и является массивом
     if (Array.isArray(params.modes)) {
       return params.modes;
     }
@@ -189,40 +191,34 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
       setSwingMode(getCurrentValue('swing'));
       setFanSpeed(getCurrentValue('fan_speed'));
     }
-  }, [isOpen, device]);
+  }, [isOpen, group]);
 
   if (!isOpen) return null;
 
   const handleApply = async () => {
-    // Формируем массив actions в расширенном формате для внутреннего использования
-    const modeActions: Array<{ instance: string; value: string | number; type?: string }> = [];
+    // Формируем массив actions
+    const modeActions: Array<{ instance: string; value: string }> = [];
 
     if (thermostatCap && thermostatMode) {
-      modeActions.push({ instance: 'thermostat', value: thermostatMode, type: 'devices.capabilities.mode' });
+      modeActions.push({ instance: 'thermostat', value: thermostatMode });
     }
     if (swingCap && swingMode) {
-      modeActions.push({ instance: 'swing', value: swingMode, type: 'devices.capabilities.mode' });
+      modeActions.push({ instance: 'swing', value: swingMode });
     }
     if (fanSpeedCap && fanSpeed) {
-      modeActions.push({ instance: 'fan_speed', value: fanSpeed, type: 'devices.capabilities.mode' });
+      modeActions.push({ instance: 'fan_speed', value: fanSpeed });
     }
     if (rangeCapability && temperature !== null) {
-      modeActions.push({ instance: 'temperature', value: temperature, type: 'devices.capabilities.range' });
+      modeActions.push({ instance: 'temperature', value: temperature.toString() });
     }
 
     if (modeActions.length === 0) return;
 
     setIsLoading(true);
     try {
-      // Преобразуем в формат, ожидаемый onApply, и передаём расширенную информацию через замыкание
-      const actionsForApi = modeActions.map(action => ({
-        instance: action.instance,
-        value: String(action.value),
-        type: action.type
-      }));
-      await (onApply as any)(actionsForApi, true); // Передаем true для включения устройства
+      await onApply(modeActions, true); // Включаем устройства при применении
     } catch (error) {
-      console.error('Ошибка при применении настроек:', error);
+      console.error('Ошибка при применении настроек климата группы:', error);
     } finally {
       setIsLoading(false);
     }
@@ -235,10 +231,10 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
         <div className="flex items-start justify-between mb-6">
           <div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              Настройки климата
+              Настройки климата группы
             </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              {device.name}
+              {group.name} ({groupDevices.length} устройств)
             </p>
           </div>
           <button

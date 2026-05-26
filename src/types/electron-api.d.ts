@@ -1,5 +1,5 @@
 // electron-api.d.ts
-import { YandexUserInfoResponse, YandexDevice, TrayMenuItem } from './types'; 
+import { YandexUserInfoResponse, YandexDevice, TrayMenuItem } from './index'; 
 
 export interface IYandexApi {
     fetchUserInfo: (token: string) => Promise<YandexUserInfoResponse>;
@@ -12,7 +12,6 @@ export interface IYandexApi {
     setSecureToken: (token: string) => Promise<void>;
     deleteSecureToken: () => Promise<void>;
 
-    // Auto-launch methods
     isAutostartEnabled: () => Promise<boolean>;
     setAutostartEnabled: (enabled: boolean) => Promise<boolean>;
 
@@ -20,7 +19,6 @@ export interface IYandexApi {
     onTrayCommand: (callback: (command: string, id: string, currentState?: boolean) => void) => void;
     removeTrayCommandListener: () => void;
     
-    // Retry attempt event listener
     onRetryAttempt: (callback: (data: {attempt: number, maxAttempts: number, message: string}) => void) => () => void;
 }
 
@@ -29,4 +27,3 @@ declare global {
         api: IYandexApi;
     }
 }
-

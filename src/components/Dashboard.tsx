@@ -1,19 +1,19 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup } from '../types';
-import { ScenarioCard } from './ScenarioCard';
-import { DeviceCard } from './DeviceCard';
-import { GroupCard } from './GroupCard';
-import { ThermostatSettingsModal } from './ThermostatSettingsModal';
-import { BrightnessSettingsModal } from './BrightnessSettingsModal';
-import { GroupLightSettingsModal } from './GroupLightSettingsModal';
-import { GroupThermostatSettingsModal } from './GroupThermostatSettingsModal';
-import { FanSettingsModal } from './FanSettingsModal';
-import { GroupFanSettingsModal } from './GroupFanSettingsModal';
-import { InfoModal } from './InfoModal';
+import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup } from '../types/index';
+import { ScenarioCard } from './cards/ScenarioCard';
+import { DeviceCard } from './cards/DeviceCard';
+import { GroupCard } from './cards/GroupCard';
+import { ThermostatSettingsModal } from './modals/ThermostatSettingsModal';
+import { BrightnessSettingsModal } from './modals/BrightnessSettingsModal';
+import { GroupLightSettingsModal } from './modals/GroupLightSettingsModal';
+import { GroupThermostatSettingsModal } from './modals/GroupThermostatSettingsModal';
+import { FanSettingsModal } from './modals/FanSettingsModal';
+import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
+import { InfoModal } from './modals/InfoModal';
 import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, Power, Info, Building2, Zap, Pencil } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { isLightDevice, isLightGroup } from '../constants';
-import packageJson from '../package.json';
+import packageJson from '../../package.json';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
 

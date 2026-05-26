@@ -41,17 +41,17 @@ function createTray() {
         // Для поддержки Retina дисплеев: Electron автоматически использует
         // trayTemplate@2x.png, если он находится в той же директории.
         // Размеры: trayTemplate.png - 16x16px, trayTemplate@2x.png - 32x32px
-        iconPath = path.join(__dirname, 'resources', 'trayTemplate.png');
+        iconPath = path.join(__dirname, '..', 'resources', 'trayTemplate.png');
     } else if (process.platform === 'win32') {
         // Для Windows используем .ico файл
-        iconPath = path.join(__dirname, 'resources', 'icon.ico');
+        iconPath = path.join(__dirname, '..', 'resources', 'icon.ico');
     } else {
         // Для Linux используем PNG
-        iconPath = path.join(__dirname, 'resources', 'icon.png');
+        iconPath = path.join(__dirname, '..', 'resources', 'icon.png');
     }
     
     // Fallback для режима разработки или если файл не найден
-    const fallbackIconPath = path.join(__dirname, 'resources', 'icon.png');
+    const fallbackIconPath = path.join(__dirname, '..', 'resources', 'icon.png');
     
     // Создаем Tray с обработкой ошибок
     try {
@@ -205,7 +205,7 @@ function createWindow () {
     if (process.env.NODE_ENV === 'development') {
         mainWindow.loadURL('http://localhost:5173'); 
     } else {
-        mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+        mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
     }
 }
 

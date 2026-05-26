@@ -6,27 +6,30 @@ export default defineConfig(({ mode }) => {
     // Загрузка переменных окружения
     const env = loadEnv(mode, '.', '');
     
-    return {
+    return {
+        root: 'src',
+        base: './',
         
-        // Генерирует относительные пути к ресурсам (./assets/...)
-        base: './', 
+        server: {
+            port: 3000,
+            host: '0.0.0.0',
+        },
+
+        build: {
+            outDir: '../dist',
+            emptyOutDir: true,
+        },
+
+        plugins: [react()],
         
-        server: {
-            port: 3000,
-            host: '0.0.0.0',
-        },
-        plugins: [react()],
+        define: {
+            'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        },
         
-        // Определение переменных окружения для Frontend (если нужно)
-        define: {
-            'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-        },
-        
-        resolve: {
-            alias: {
-                // Предполагая, что исходный код находится в 'src'
-                '@': path.resolve(__dirname, 'src'), 
-            }
-        }
-    };
+        resolve: {
+            alias: {
+                '@': path.resolve(__dirname, 'src'),
+            }
+        }
+    };
 });

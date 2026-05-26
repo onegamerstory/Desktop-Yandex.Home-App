@@ -1,11 +1,7 @@
-import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexGroup } from '../types';
+import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexGroup } from '../types/index';
 
-// Используем глобально объявленный 'api'
 const yandexApi = window.api;
 
-/**
- * Инъекция мок-данных (6 примеров + 8 новых типов сенсоров)
- */
 const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUserInfoResponse => {
     if (!data.households || data.households.length === 0) {
         return data;
@@ -14,7 +10,6 @@ const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUse
     const firstHousehold = data.households[0];
     const existingDeviceIds = new Set(data.devices.map(d => d.id));
 
-    // Helper function to create or find a room for mock devices
     const getOrCreateMockRoom = (roomId: string, roomName: string): YandexRoom => {
         let room = data.rooms.find(r => r.household_id === firstHousehold.id && r.id === roomId);
         if (!room) {
@@ -553,15 +548,12 @@ const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUse
         mockDevices.push(device);
     }
 
-    // If no new devices to add, return original data
     if (mockDevices.length === 0) {
         return data;
     }
 
-    // Update devices array
     const updatedDevices = [...data.devices, ...mockDevices];
 
-    // Update rooms to include device IDs
     const deviceIdsByRoom = new Map<string, string[]>();
     mockDevices.forEach(device => {
         if (device.room) {
@@ -583,11 +575,9 @@ const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUse
         return room;
     });
 
-    // Создаем мок-группы устройств
     const existingGroupIds = new Set(data.groups.map(g => g.id));
     const mockGroups = [];
 
-    // Группа 1: Группа лампочек (если есть лампочки в мок-устройствах)
     if (!existingGroupIds.has('GROUP_LIGHTS')) {
         const lightDevices = [...data.devices, ...mockDevices].filter(d => d.type.startsWith('devices.types.light'));
         if (lightDevices.length > 0) {
@@ -611,7 +601,6 @@ const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUse
         }
     }
 
-    // Группа 2: Группа сенсоров (если есть сенсоры)
     if (!existingGroupIds.has('GROUP_SENSORS')) {
         const sensorDevices = [...data.devices, ...mockDevices].filter(d => 
             d.properties && d.properties.length > 0 && 
@@ -638,10 +627,8 @@ const injectComprehensiveMockDevices = (data: YandexUserInfoResponse): YandexUse
 
 export const fetchUserInfo = async (token: string): Promise<YandexUserInfoResponse> => {
     try {
-        // Вызываем функцию через IPC-мост, а не fetch напрямую!
         const userInfo = await yandexApi.fetchUserInfo(token) as YandexUserInfoResponse;
 
-        // Собираем устройства, которые есть только в rooms.devices[], но отсутствуют в devices[]
         const knownDeviceIds = new Set(userInfo.devices.map(d => d.id));
         const roomDeviceIds = new Set(userInfo.rooms.flatMap(r => r.devices));
         const missingDeviceIds = Array.from(roomDeviceIds).filter(id => !knownDeviceIds.has(id));
@@ -656,7 +643,6 @@ export const fetchUserInfo = async (token: string): Promise<YandexUserInfoRespon
             try {
                 const device = await yandexApi.fetchDevice(token, deviceId) as YandexDevice;
 
-                // Проставляем room/household, если API их не вернул
                 const room = userInfo.rooms.find(r => r.devices.includes(deviceId));
                 if (room) {
                     if (!device.room) {
@@ -679,7 +665,6 @@ export const fetchUserInfo = async (token: string): Promise<YandexUserInfoRespon
             devices: [...userInfo.devices, ...fetchedDevices],
         };
     } catch (error) {
-        // Здесь вы получите ошибки, переданные из main.js
         console.error('Ошибка при загрузке данных через IPC:', error);
         throw error;
     }
@@ -695,7 +680,6 @@ export const toggleDevice = async (token: string, deviceId: string, newState: bo
     }
 };
 
-// 2. ДОБАВЛЕНО: Не хватает функции executeScenario (должна быть вызвана из App.tsx)
 export const executeScenario = async (token: string, scenarioId: string): Promise<void> => {
     try {
         await yandexApi.executeScenario(token, scenarioId);

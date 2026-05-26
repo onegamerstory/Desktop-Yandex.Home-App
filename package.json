@@ -1,12 +1,12 @@
 {
   "name": "yandex-smart-home-control",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.7.1",
   "type": "module",
-  "main": "main.js",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
-    "electron-dev": "node electron-wait-for-vite.js",
+    "electron-dev": "node scripts/electron-wait-for-vite.js",
     "build": "vite build",
     "dist": "npm run build && electron-builder",
     "preview": "vite preview"
@@ -41,9 +41,8 @@
     "icon": "resources/icon.png",
     "files": [
       "dist/**/*",
-      "main.js",
-      "preload.cjs",
-      "yandex-api.js",
+      "electron/*.js",
+      "electron/*.cjs",
       "node_modules/**/*", 
       "resources/*"
     ],

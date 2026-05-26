@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
-import { UpdateNotificationModal } from './components/UpdateNotificationModal';
+import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
 import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
-import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types'; 
+import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index'; 
 import { formatSensorValue, formatSensorValueForTray } from './constants';
 import { AlertCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
-import packageJson from './package.json';
+import packageJson from '../package.json';
 
 // Получаем доступ к IPC-мосту, предоставленному Electron preload скриптом
 const yandexApi = window.api; 

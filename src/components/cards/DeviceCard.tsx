@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { YandexDevice } from '../types';
-import { getIconForDevice, localizeUnit } from '../constants';
+import { YandexDevice } from '../../types/index';
+import { getIconForDevice, localizeUnit } from '../../constants';
 import { Loader2, Power, Star, Settings, Eye, EyeOff } from 'lucide-react';
 
 interface DeviceCardProps {

@@ -28,7 +28,6 @@ export interface YandexCapability {
   parameters?: unknown | YandexModeCapabilityParameters;
 }
 
-// Дополнительные типы для свойств датчиков (сенсоров)
 export interface YandexPropertyState {
   instance: string;
   value: boolean | number | string;
@@ -41,13 +40,13 @@ export interface YandexPropertyEvent {
 }
 
 export interface YandexPropertyParameters {
-  instance: string; // например, 'humidity', 'temperature', 'open', 'motion'
-  unit?: string;    // например, 'unit.percent', 'unit.temperature.celsius', 'unit.cubic_meter'
-  events?: YandexPropertyEvent[]; // для event-типов свойств (например, 'devices.properties.event')
+  instance: string;
+  unit?: string;
+  events?: YandexPropertyEvent[];
 }
 
 export interface YandexProperty {
-  type: string;               // 'devices.properties.float', 'devices.properties.event' и т.д.
+  type: string;
   retrievable: boolean;
   reportable: boolean;
   parameters?: YandexPropertyParameters;
@@ -115,9 +114,7 @@ export interface TrayMenuItem {
     id: string;
     name: string;
     type: TrayItemType;
-    // Для устройств
     isToggleable?: boolean; 
     isOn?: boolean;
-    // Для сенсоров и счётчиков - отформатированное значение (например, "24.5 °C", "закрыто", "3758.142 м³")
     sensorValue?: string | null;
 }
