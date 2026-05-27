@@ -8,10 +8,8 @@ import {
   Settings, 
   Fan,
   Gauge,
-  RotateCcw,
   Rotate3D,
   Pause,
-  Play
 } from 'lucide-react';
 
 interface FanSettingsModalProps {
@@ -100,12 +98,11 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
 
   // Компонент для отображения иконки режима
   const ModeIconButton: React.FC<{
-    value: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     isSelected: boolean;
     onClick: () => void;
-  }> = ({ value, label, icon: Icon, isSelected, onClick }) => {
+  }> = ({ label, icon: Icon, isSelected, onClick }) => {
     return (
       <button
         type="button"

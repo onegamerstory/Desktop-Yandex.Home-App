@@ -4,7 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
 import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index'; 
-import { formatSensorValue, formatSensorValueForTray } from './constants';
+import { formatSensorValueForTray } from './constants';
 import { AlertCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import packageJson from '../package.json';

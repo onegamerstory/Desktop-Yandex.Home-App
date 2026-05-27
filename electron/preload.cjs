@@ -3,7 +3,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-    // ... (Существующие функции API)
     fetchUserInfo: (token) => ipcRenderer.invoke('yandex-api:fetchUserInfo', token),
     executeScenario: (token, scenarioId) => ipcRenderer.invoke('yandex-api:executeScenario', token, scenarioId),
     toggleDevice: (token, deviceId, newState) => ipcRenderer.invoke('yandex-api:toggleDevice', token, deviceId, newState),
@@ -22,7 +21,6 @@ contextBridge.exposeInMainWorld('api', {
     isAutostartEnabled: () => ipcRenderer.invoke('autostart:isEnabled'),
     setAutostartEnabled: (enabled) => ipcRenderer.invoke('autostart:setEnabled', enabled), 
 	
-	 // --- НОВЫЙ IPC ДЛЯ ТРЕЯ ---
     // Отправка данных избранного из рендерера в главный процесс
     sendFavoritesToTray: (favorites) => ipcRenderer.send('tray:update-favorites', favorites),
     

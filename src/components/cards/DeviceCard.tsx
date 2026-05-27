@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../../types/index';
 import { getIconForDevice, localizeUnit } from '../../constants';
-import { Loader2, Power, Star, Settings, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Star, Settings, Eye, EyeOff } from 'lucide-react';
 
 interface DeviceCardProps {
   device: YandexDevice;
@@ -10,12 +10,11 @@ interface DeviceCardProps {
   onToggleFavorite: (id: string) => void;
   onOpenSettings?: (device: YandexDevice) => void;
   isEditMode?: boolean;
-  isHidden?: boolean;
   iconHiddenState?: boolean;
   onToggleVisibility?: (id: string) => void;
 }
 
-export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings, isEditMode = false, isHidden = false, iconHiddenState = false, onToggleVisibility }) => {
+export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings, isEditMode = false, iconHiddenState = false, onToggleVisibility }) => {
   const [loading, setLoading] = useState(false);
 
   // Проверяем, является ли устройство кондиционером или термостатом

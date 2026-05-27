@@ -1,4 +1,4 @@
-import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexGroup, YandexModeAction } from '../types/index';
+import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexModeAction } from '../types/index';
 
 const yandexApi = window.api;
 

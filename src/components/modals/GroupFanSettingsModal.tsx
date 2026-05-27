@@ -104,12 +104,11 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
 
   // Компонент для отображения иконки режима
   const ModeIconButton: React.FC<{
-    value: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     isSelected: boolean;
     onClick: () => void;
-  }> = ({ value, label, icon: Icon, isSelected, onClick }) => {
+  }> = ({ label, icon: Icon, isSelected, onClick }) => {
     return (
       <button
         type="button"

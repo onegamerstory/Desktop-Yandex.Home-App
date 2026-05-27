@@ -9,12 +9,11 @@ interface ScenarioCardProps {
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   isEditMode?: boolean;
-  isHidden?: boolean;
   iconHiddenState?: boolean;
   onToggleVisibility?: (id: string) => void;
 }
 
-export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onExecute, isFavorite, onToggleFavorite, isEditMode = false, isHidden = false, iconHiddenState = false, onToggleVisibility }) => {
+export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onExecute, isFavorite, onToggleFavorite, isEditMode = false, iconHiddenState = false, onToggleVisibility }) => {
   const [loading, setLoading] = useState(false);
   const [justExecuted, setJustExecuted] = useState(false);
 

@@ -415,12 +415,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     await onSetDeviceMode(selectedThermostatDevice.id, modeActions, true); // Включаем устройство при применении
   }, [selectedThermostatDevice, onSetDeviceMode]);
 
-  const handleOkThermostatSettings = useCallback(async (modeActions: YandexModeAction[]) => {
-    if (!selectedThermostatDevice) return;
-    await onSetDeviceMode(selectedThermostatDevice.id, modeActions);
-    setSelectedThermostatDevice(null);
-  }, [selectedThermostatDevice, onSetDeviceMode]);
-
   const handleOpenLightSettings = useCallback((device: YandexDevice) => {
     setSelectedLightDevice(device);
   }, []);
@@ -768,7 +762,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 							{visibleFavoriteScenarios.map(scenario => {
 								const cardId = `scenario_${scenario.id}`;
-								const isHidden = getEffectiveHidden(cardId);
 								return (
 									<ScenarioCard 
 										key={scenario.id} 
@@ -777,7 +770,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 										isFavorite={true} 
 										onToggleFavorite={onToggleScenarioFavorite}
 										isEditMode={isEditMode}
-										isHidden={isHidden}
 										iconHiddenState={getIconHiddenState(cardId)}
 										onToggleVisibility={() => toggleCardVisibility(cardId)}
 									/>
@@ -794,7 +786,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 							{visibleFavoriteDevices.map(device => {
 								const cardId = `device_${device.id}`;
-								const isHidden = getEffectiveHidden(cardId);
 								return (
 									<DeviceCard 
 										key={device.id} 
@@ -812,7 +803,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 											}
 										}}
 										isEditMode={isEditMode}
-										isHidden={isHidden}
 										iconHiddenState={getIconHiddenState(cardId)}
 										onToggleVisibility={() => toggleCardVisibility(cardId)}
 									/>
@@ -864,7 +854,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         isFavorite={favoriteScenarioIds.includes(scenario.id)}
                         onToggleFavorite={onToggleScenarioFavorite}
                         isEditMode={isEditMode}
-                        isHidden={isHidden}
                         iconHiddenState={getIconHiddenState(cardId)}
                         onToggleVisibility={() => toggleCardVisibility(cardId)}
                       />
@@ -975,32 +964,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                        const visibleDevices = devicesForHome.filter(d => !getEffectiveHidden(`device_${d.id}`));
                        return visibleDevices.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                           {visibleDevices.map(device => {
-                             const cardId = `device_${device.id}`;
-                             const isHidden = getEffectiveHidden(cardId);
-                             return (
-                               <DeviceCard 
-                               key={device.id} 
-                               device={device} 
-                               onToggle={onToggleDevice} 
-                               isFavorite={favoriteDeviceIds.includes(device.id)} 
-                               onToggleFavorite={onToggleDeviceFavorite}
-                               onOpenSettings={(dev) => {
-                                 if (isLightDevice(dev.type)) {
-                                   handleOpenLightSettings(dev);
-                                 } else if (dev.type === 'devices.types.ventilation.fan') {
-                                   handleOpenFanSettings(dev);
-                                 } else {
-                                   handleOpenThermostatSettings(dev);
-                                 }
+                            {visibleDevices.map(device => {
+                              const cardId = `device_${device.id}`;
+                              return (
+                                <DeviceCard 
+                                key={device.id} 
+                                device={device} 
+                                onToggle={onToggleDevice} 
+                                isFavorite={favoriteDeviceIds.includes(device.id)} 
+                                onToggleFavorite={onToggleDeviceFavorite}
+                                onOpenSettings={(dev) => {
+                                  if (isLightDevice(dev.type)) {
+                                    handleOpenLightSettings(dev);
+                                  } else if (dev.type === 'devices.types.ventilation.fan') {
+                                    handleOpenFanSettings(dev);
+                                  } else {
+                                    handleOpenThermostatSettings(dev);
+                                  }
 }}
-                                isEditMode={isEditMode}
-                                isHidden={isHidden}
-                                iconHiddenState={getIconHiddenState(cardId)}
-                                onToggleVisibility={() => toggleCardVisibility(cardId)}
+                                 isEditMode={isEditMode}
+                                 iconHiddenState={getIconHiddenState(cardId)}
+                                 onToggleVisibility={() => toggleCardVisibility(cardId)}
                                 />
-                              );
-                            })}
+                               );
+                             })}
                          </div>
                         ) : null;
                       })()
@@ -1030,34 +1017,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 </button>
                                 {!isRoomCollapsed && (
 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                      {roomDevices
-                                        .filter(dev => !getEffectiveHidden(`device_${dev.id}`))
-                                        .map(dev => {
-                                          const cardId = `device_${dev.id}`;
-                                          const isHidden = getEffectiveHidden(cardId);
-                                          return (
-                                            <DeviceCard 
-                                            key={dev.id} 
-                                            device={dev} 
-                                            onToggle={onToggleDevice} 
-                                            isFavorite={favoriteDeviceIds.includes(dev.id)} 
-                                            onToggleFavorite={onToggleDeviceFavorite}
-                                            onOpenSettings={(device) => {
-                                              if (isLightDevice(device.type)) {
-                                                handleOpenLightSettings(device);
-                                              } else if (device.type === 'devices.types.ventilation.fan') {
-                                                handleOpenFanSettings(device);
-                                              } else {
-                                                handleOpenThermostatSettings(device);
-                                              }
-                                            }}
-                                            isEditMode={isEditMode}
-                                            isHidden={isHidden}
-                                            iconHiddenState={getIconHiddenState(cardId)}
-                                            onToggleVisibility={() => toggleCardVisibility(cardId)}
-                                            />
-                                          );
-                                        })}
+                                       {roomDevices
+                                         .filter(dev => !getEffectiveHidden(`device_${dev.id}`))
+                                         .map(dev => {
+                                           const cardId = `device_${dev.id}`;
+                                           return (
+                                             <DeviceCard 
+                                             key={dev.id} 
+                                             device={dev} 
+                                             onToggle={onToggleDevice} 
+                                             isFavorite={favoriteDeviceIds.includes(dev.id)} 
+                                             onToggleFavorite={onToggleDeviceFavorite}
+                                             onOpenSettings={(device) => {
+                                               if (isLightDevice(device.type)) {
+                                                 handleOpenLightSettings(device);
+                                               } else if (device.type === 'devices.types.ventilation.fan') {
+                                                 handleOpenFanSettings(device);
+                                               } else {
+                                                 handleOpenThermostatSettings(device);
+                                               }
+                                             }}
+                                             isEditMode={isEditMode}
+                                             iconHiddenState={getIconHiddenState(cardId)}
+                                             onToggleVisibility={() => toggleCardVisibility(cardId)}
+                                             />
+                                           );
+                                         })}
                                     </div>
                                 )}
                             </div>
@@ -1094,7 +1079,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                     {visibleUnassignedDevices.map(dev => {
                                       const cardId = `device_${dev.id}`;
-                                      const isHidden = getEffectiveHidden(cardId);
 return (
                                         <DeviceCard 
                                         key={dev.id} 
@@ -1112,7 +1096,6 @@ return (
                                           }
                                         }}
                                         isEditMode={isEditMode}
-                                        isHidden={isHidden}
                                         iconHiddenState={getIconHiddenState(cardId)}
                                         onToggleVisibility={() => toggleCardVisibility(cardId)}
                                         />

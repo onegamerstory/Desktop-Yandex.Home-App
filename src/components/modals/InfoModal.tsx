@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Download } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 
 interface InfoModalProps {
   isOpen: boolean;

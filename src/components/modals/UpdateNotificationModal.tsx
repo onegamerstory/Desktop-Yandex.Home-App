@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ExternalLink, Download } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 
 interface UpdateNotificationModalProps {
   isOpen: boolean;

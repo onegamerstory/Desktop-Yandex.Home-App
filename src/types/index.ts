@@ -109,11 +109,6 @@ export interface YandexUserInfoResponse {
   households: YandexHousehold[];
 }
 
-export interface ApiError {
-  status: string;
-  message: string;
-}
-
 export enum AppState {
   AUTH = 'AUTH',
   LOADING = 'LOADING',

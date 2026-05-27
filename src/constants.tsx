@@ -111,7 +111,6 @@ export const localizeUnit = (unitCode: string | undefined): string => {
         return UNIT_LOCALIZATION_MAP[unitCode];
     }
     
-    // Return empty string for unknown units (or return original code if preferred)
     return '';
 }
 
@@ -148,7 +147,7 @@ export const formatSensorValue = (device: { properties?: Array<{
             typeof instance === 'string' &&
             anyProp?.state?.value !== undefined
         );
-    }) as any | undefined;
+    }) as any;
 
     if (!sensorProperty) {
         return null;
@@ -243,7 +242,7 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
         const type: string | undefined = anyProp?.type;
         const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
         return type === 'devices.properties.float' && instance === 'temperature';
-    }) as any | undefined;
+    }) as any;
 
     // Extract humidity property
     const humidityProperty = device.properties.find(prop => {
@@ -251,7 +250,7 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
         const type: string | undefined = anyProp?.type;
         const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
         return type === 'devices.properties.float' && instance === 'humidity';
-    }) as any | undefined;
+    }) as any;
 
     // Get temperature value and unit
     const temperatureValue: number | null = temperatureProperty?.state?.value ?? null;

@@ -174,7 +174,6 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {visibleGroupDevices.map(device => {
                 const cardId = `device_${device.id}`;
-                const isHidden = getEffectiveHidden(cardId);
                 return (
                   <DeviceCard
                     key={device.id}
@@ -184,7 +183,6 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                     onToggleFavorite={onToggleDeviceFavorite}
                     onOpenSettings={onOpenSettings}
                     isEditMode={isEditMode}
-                    isHidden={isHidden}
                     iconHiddenState={getIconHiddenState(cardId)}
                     onToggleVisibility={() => onToggleDeviceVisibility?.(cardId)}
                   />
