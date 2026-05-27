@@ -10,7 +10,7 @@ import { GroupThermostatSettingsModal } from './modals/GroupThermostatSettingsMo
 import { FanSettingsModal } from './modals/FanSettingsModal';
 import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
 import { InfoModal } from './modals/InfoModal';
-import { LogOut, Home, Layers, MonitorSmartphone, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, Power, Info, Building2, Zap, Pencil } from 'lucide-react';
+import { LogOut, Home, SquareSquare, Lightbulb, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, Power, Info, Building2, ScrollText, Pencil } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { isLightDevice, isLightGroup } from '../constants';
 import packageJson from '../../package.json';
@@ -726,21 +726,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
             </div>
             <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400"><Layers className="w-6 h-6"/></div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400"><SquareSquare className="w-6 h-6"/></div>
                 <div>
                     <p className="text-sm text-slate-600 dark:text-secondary">Комнат</p>
                     <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{roomsForHome.length}</p>
                 </div>
             </div>
             <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg text-purple-600 dark:text-purple-400"><Zap className="w-6 h-6"/></div>
+                <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg text-purple-600 dark:text-purple-400"><ScrollText className="w-6 h-6"/></div>
                 <div>
                     <p className="text-sm text-slate-600 dark:text-secondary">Сценариев</p>
                     <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{activeScenarios.length}</p>
                 </div>
             </div>
             <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400"><MonitorSmartphone className="w-6 h-6"/></div>
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400"><Lightbulb className="w-6 h-6"/></div>
                 <div>
                     <p className="text-sm text-slate-600 dark:text-secondary">Устройств</p>
                     <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{devicesForHome.length}</p>
