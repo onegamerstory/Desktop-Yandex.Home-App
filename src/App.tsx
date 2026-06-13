@@ -3,7 +3,7 @@ import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
 import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
 import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
-import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index'; 
+import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, YandexGroup, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index'; 
 import { formatSensorValueForTray } from './constants';
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -118,11 +118,15 @@ function App() {
         // 3. Сортировка сценариев по названию
         const sortedScenarios: YandexScenario[] = [...data.scenarios].sort((a, b) => a.name.localeCompare(b.name));
 
+        // 4. Сортировка групп по названию
+        const sortedGroups: YandexGroup[] = [...data.groups].sort((a, b) => a.name.localeCompare(b.name));
+
         return { 
             ...data, 
             devices: sortedDevices,
             rooms: sortedRooms,
             scenarios: sortedScenarios,
+            groups: sortedGroups,
         };
     }, []);
 
