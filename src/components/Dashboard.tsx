@@ -764,7 +764,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 				{/* Избранные сценарии */}
 				{visibleFavoriteScenarios.length > 0 && (
 					<>
-						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3">Сценарии ({visibleFavoriteScenarios.length})</h3>
+						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3 flex items-center gap-2">Сценарии <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-surface px-2 py-1 rounded-full">{visibleFavoriteScenarios.length}</span></h3>
 						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 							{visibleFavoriteScenarios.map(scenario => {
 								const cardId = `scenario_${scenario.id}`;
@@ -788,7 +788,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 				{/* Избранные устройства */}
 				{visibleFavoriteDevices.length > 0 && (
 					<>
-						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3">Устройства ({visibleFavoriteDevices.length})</h3>
+						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3 flex items-center gap-2">Устройства <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-surface px-2 py-1 rounded-full">{visibleFavoriteDevices.length}</span></h3>
 						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 							{visibleFavoriteDevices.map(device => {
 								const cardId = `device_${device.id}`;
@@ -821,7 +821,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 				{/* Избранные группы */}
 				{visibleFavoriteGroups.length > 0 && (
 					<>
-						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3">Группы ({visibleFavoriteGroups.length})</h3>
+						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3 flex items-center gap-2">Группы <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-surface px-2 py-1 rounded-full">{visibleFavoriteGroups.length}</span></h3>
 						<div className="space-y-4">
 							{visibleFavoriteGroups.map(group => (
 								<GroupCard
