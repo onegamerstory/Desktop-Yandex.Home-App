@@ -69,7 +69,8 @@ function createTray() {
     
     appTray.setToolTip('Управление Умным Домом Яндекс');
     
-    // На macOS используем событие 'click', на других платформах может быть 'click' или 'right-click'
+    // На macOS: левый клик — только показать/скрыть окно, правый клик — контекстное меню
+    // На других платформах: левый клик — показать/скрыть окно + контекстное меню через setContextMenu
     appTray.on('click', () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
             if (mainWindow.isVisible()) {
@@ -83,46 +84,44 @@ function createTray() {
         }
     });
 
-    // Обновляем контекстное меню сразу после создания
+    if (process.platform === 'darwin') {
+        appTray.on('right-click', () => {
+            appTray.popUpContextMenu(buildTrayMenu());
+        });
+    }
+
+    // Обновляем контекстное меню сразу после создания (для Windows/Linux)
     updateTrayMenu();
 }
 
-// Функция для создания контекстного меню Tray
-function updateTrayMenu() {
-    if (!appTray) return;
-
+// Функция для построения меню трея
+function buildTrayMenu() {
     // --- Динамическая секция избранных элементов ---
     const favoriteMenuItems = favoritesData.map(item => {
         const isDevice = item.type === 'device';
         const isToggleableDevice = isDevice && item.isToggleable;
         
-        // Для устройств отображаем статус или значение сенсора
         let deviceStatus = '';
         if (isDevice) {
-            // Если есть sensorValue (для сенсоров и счётчиков), показываем его вместо цветового индикатора
             if (item.sensorValue) {
                 deviceStatus = ` ${item.sensorValue}`;
             } else if (isToggleableDevice) {
-                // Для переключаемых устройств показываем цветовой индикатор
                 deviceStatus = item.isOn
-                    ? ' 🟢' // Зеленый кружок для "Вкл" (включено)
-                    : ' 🔴'; // Красный кружок для "Выкл" (выключено)
+                    ? ' 🟢'
+                    : ' 🔴';
             }
         }
         const label = `${item.name}${deviceStatus}`;
         
-        // Определяем действие при клике
         let clickAction = null;
 
         if (isToggleableDevice) {
-            // Отправляем команду TOGGLE_DEVICE в React-приложение
             clickAction = () => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('tray:execute-command', 'TOGGLE_DEVICE', item.id, item.isOn);
                 }
             };
         } else if (item.type === 'scenario') {
-            // Отправляем команду EXECUTE_SCENARIO в React-приложение
              clickAction = () => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('tray:execute-command', 'EXECUTE_SCENARIO', item.id);
@@ -133,13 +132,12 @@ function updateTrayMenu() {
         return {
             label: label,
             type: 'normal',
-            enabled: !!clickAction, // Отключаем, если нет действия
+            enabled: !!clickAction,
             click: clickAction,
         };
     });
 
-    // --- Основное меню ---
-    const contextMenu = Menu.buildFromTemplate([
+    return Menu.buildFromTemplate([
         { 
             label: 'Открыть приложение', 
             click: () => {
@@ -151,18 +149,12 @@ function updateTrayMenu() {
                 }
             }
         },
-        // Разделитель перед динамической секцией, если она не пуста
         ...(favoriteMenuItems.length > 0 ? [{ type: 'separator' }] : []), 
-        
-        // Динамическая секция
         ...favoriteMenuItems,
-        
-        // Разделитель перед "Выход"
         { type: 'separator' },
         { 
             label: 'Выход', 
             click: () => {
-                // Удаляем слушатель 'close', чтобы гарантированно закрыть приложение
                 if (mainWindow) {
                     mainWindow.removeListener('close', minimizeToTray);
                 }
@@ -170,8 +162,14 @@ function updateTrayMenu() {
             }
         },
     ]);
+}
 
-    appTray.setContextMenu(contextMenu);
+// Функция для обновления контекстного меню Tray (только Windows/Linux)
+function updateTrayMenu() {
+    if (!appTray) return;
+    if (process.platform !== 'darwin') {
+        appTray.setContextMenu(buildTrayMenu());
+    }
 }
 
 
