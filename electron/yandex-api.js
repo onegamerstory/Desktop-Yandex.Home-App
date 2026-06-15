@@ -1,5 +1,7 @@
 // yandex-api.js (Это будет чистый Node.js код)
 
+import { getCameraStreamFromQuasar, sendQuasarDeviceActions, getQuasarDevice, buildPrivacyActionCandidates } from './yandex-quasar.js';
+
 const BASE_URL = 'https://api.iot.yandex.net/v1.0';
 
 // Константы для retry механизма
@@ -44,8 +46,11 @@ const withRetry = async (asyncFn, onRetryAttempt = null) => {
         } catch (error) {
             lastError = error;
             
-            // Если это ошибка авторизации, не повторяем попытку
+            // Если это ошибка авторизации или x-token, не повторяем попытку
             if (error.message?.includes('авторизац') || 
+                error.message?.includes('Quasar auth') ||
+                error.message?.includes('x-token') ||
+                error.message?.includes('X_TOKEN_REQUIRED') ||
                 error.message?.includes('401') || 
                 error.message?.includes('403')) {
                 throw error;
@@ -302,4 +307,91 @@ export const toggleGroup = async (token, groupId, deviceIds, newState, onRetryAt
             throw new Error(`Ошибка устройства: ${firstError.error_message || firstError.error_code}`);
         }
     }, onRetryAttempt);
+};
+
+// 6. Получение HLS-видеопотока с камеры (через Quasar API — нужен x-token, не IoT OAuth)
+export const getCameraStream = async (xToken, deviceId, onRetryAttempt = null) => {
+    return withRetry(async () => {
+        return getCameraStreamFromQuasar(xToken, deviceId);
+    }, onRetryAttempt);
+};
+
+// 7. Управление режимом приватности камеры
+const sendIotDeviceAction = async (token, deviceId, action, onRetryAttempt = null) => {
+    const body = {
+        devices: [
+            {
+                id: deviceId,
+                actions: [action],
+            },
+        ],
+    };
+
+    return withRetry(async () => {
+        const response = await fetch(`${BASE_URL}/devices/actions`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Не удалось изменить параметр устройства: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const deviceResult = data.devices?.find((d) => d.id === deviceId);
+        if (deviceResult && 'error_code' in deviceResult) {
+            throw new Error(deviceResult.error_message || deviceResult.error_code);
+        }
+    }, onRetryAttempt);
+};
+
+export const getQuasarCameraDevice = async (xToken, deviceId, onRetryAttempt = null) => {
+    return withRetry(async () => getQuasarDevice(xToken, deviceId), onRetryAttempt);
+};
+
+export const setCameraPrivacyMode = async (
+    iotToken,
+    xToken,
+    deviceId,
+    privacyEnabled,
+    toggleInstance = 'privacy',
+    onRetryAttempt = null,
+) => {
+    let quasarDevice = null;
+    if (xToken) {
+        try {
+            quasarDevice = await getQuasarDevice(xToken, deviceId);
+        } catch {
+            quasarDevice = null;
+        }
+    }
+
+    const candidates = buildPrivacyActionCandidates(quasarDevice, privacyEnabled, toggleInstance);
+    let lastError = null;
+
+    if (xToken) {
+        for (const action of candidates) {
+            try {
+                await sendQuasarDeviceActions(xToken, deviceId, [action]);
+                return;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+    }
+
+    for (const action of candidates) {
+        try {
+            await sendIotDeviceAction(iotToken, deviceId, action, onRetryAttempt);
+            return;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    throw lastError ?? new Error('Не удалось изменить режим приватности');
 };

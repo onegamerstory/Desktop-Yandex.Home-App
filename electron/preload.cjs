@@ -9,6 +9,15 @@ contextBridge.exposeInMainWorld('api', {
     toggleGroup: (token, groupId, deviceIds, newState) => ipcRenderer.invoke('yandex-api:toggleGroup', token, groupId, deviceIds, newState),
     setDeviceMode: (token, deviceId, modeActions, turnOn) => ipcRenderer.invoke('yandex-api:setDeviceMode', token, deviceId, modeActions, turnOn),
     fetchDevice: (token, deviceId) => ipcRenderer.invoke('yandex-api:fetchDevice', token, deviceId),
+    getCameraStream: (deviceId) => ipcRenderer.invoke('yandex-api:getCameraStream', deviceId),
+    setCameraPrivacyMode: (deviceId, privacyEnabled, toggleInstance) =>
+        ipcRenderer.invoke('yandex-api:setCameraPrivacyMode', deviceId, privacyEnabled, toggleInstance),
+    getQuasarCameraDevice: (deviceId) => ipcRenderer.invoke('yandex-api:getQuasarCameraDevice', deviceId),
+
+    hasXToken: () => ipcRenderer.invoke('yandex-auth:hasXToken'),
+    startQrAuth: () => ipcRenderer.invoke('yandex-auth:startQr'),
+    pollQrAuth: () => ipcRenderer.invoke('yandex-auth:pollQr'),
+    cancelQrAuth: () => ipcRenderer.invoke('yandex-auth:cancelQr'),
     
     // Запрашивает токен из Keytar
     getSecureToken: () => ipcRenderer.invoke('secure:getToken'), 

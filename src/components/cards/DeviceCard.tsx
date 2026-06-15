@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../../types/index';
-import { getIconForDevice, localizeUnit } from '../../constants';
-import { Loader2, Star, Settings, Eye, EyeOff } from 'lucide-react';
+import { getIconForDevice, localizeUnit, isCameraDevice } from '../../constants';
+import { Loader2, Star, Settings, Eye, EyeOff, Video } from 'lucide-react';
 
 interface DeviceCardProps {
   device: YandexDevice;
@@ -9,12 +9,13 @@ interface DeviceCardProps {
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onOpenSettings?: (device: YandexDevice) => void;
+  onOpenCameraStream?: (device: YandexDevice) => void;
   isEditMode?: boolean;
   iconHiddenState?: boolean;
   onToggleVisibility?: (id: string) => void;
 }
 
-export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings, isEditMode = false, iconHiddenState = false, onToggleVisibility }) => {
+export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings, onOpenCameraStream, isEditMode = false, iconHiddenState = false, onToggleVisibility }) => {
   const [loading, setLoading] = useState(false);
 
   // Проверяем, является ли устройство кондиционером или термостатом
@@ -25,6 +26,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
 
   // Проверяем, является ли устройство вентилятором
   const isFan = device.type === 'devices.types.ventilation.fan';
+
+  // Проверяем, является ли устройство камерой с видеопотоком
+  const isCamera = isCameraDevice(device);
 
   // Find the on_off capability
   const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
@@ -126,6 +130,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
     : null;
 
   const handleClick = async () => {
+    if (isCamera && onOpenCameraStream) {
+      onOpenCameraStream(device);
+      return;
+    }
+
     if (!isToggleable || loading) return;
 
     setLoading(true);
@@ -140,6 +149,13 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
+    if (isCamera && onOpenCameraStream) {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenCameraStream(device);
+      return;
+    }
+
     if ((isThermostat || isLight || isFan) && onOpenSettings) {
       e.preventDefault();
       e.stopPropagation();
@@ -162,9 +178,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
         border rounded-xl text-left
         transition-all duration-200 ease-out
         w-full
-        ${isToggleable ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default'}
+        ${isToggleable || isCamera ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-default'}
         ${
-          isToggleable
+          isCamera
+            ? 'bg-white dark:bg-surface border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+            : isToggleable
             ? isOn
               ? 'bg-purple-50 dark:bg-primary/20 border-purple-300 dark:border-primary/50 shadow-purple-200 dark:shadow-[0_0_15px_rgba(59,130,246,0.15)]'
               : 'bg-white dark:bg-surface border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-slate-700/50'
@@ -186,6 +204,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
           title={iconHiddenState ? 'Показать на дашборде' : 'Скрыть с дашборда'}
         >
           {iconHiddenState ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </div>
+      )}
+
+      {/* Camera stream button */}
+      {isCamera && onOpenCameraStream && (
+        <div
+          onClick={(e) => {
+              e.stopPropagation();
+              onOpenCameraStream(device);
+          }}
+          className="p-1 rounded-full transition-all duration-200 cursor-pointer text-gray-400 dark:text-slate-500 opacity-50 hover:opacity-100 hover:text-slate-900 dark:hover:text-white"
+          title="Открыть видеопоток"
+        >
+          <Video className="w-4 h-4" />
         </div>
       )}
 
@@ -224,7 +256,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
           className={`
             p-2 rounded-full transition-colors duration-300
             ${
-              isToggleable
+              isCamera
+                ? 'bg-purple-50 dark:bg-primary text-purple-600 dark:text-slate-100'
+                : isToggleable
                 ? isOn
                   ? 'bg-purple-600 dark:bg-primary text-white'
                   : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400'
@@ -264,7 +298,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
             </>
           ) : (
             <p>
-              {isSensor && formattedSensorValue
+              {isCamera
+                ? 'Нажмите для просмотра'
+                : isSensor && formattedSensorValue
                 ? formattedSensorValue
                 : isOn
                   ? 'Включено'
