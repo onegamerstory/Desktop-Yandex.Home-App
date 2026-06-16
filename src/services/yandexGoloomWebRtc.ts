@@ -566,12 +566,12 @@ export const connectYandexGoloomWebRtc = async (
                 if (closed) return;
                 log('JWT expiring soon — triggering credential refresh reconnect');
                 intentionalClose = true;
-                doCleanup(ws, pc, false, true);
                 if (onCredentialRefresh) {
                     onCredentialRefresh();
                 } else {
                     onDisconnect?.();
                 }
+                doCleanup(ws, pc, false, true);
             };
             if (refreshIn > 5000) {
                 jwtRefreshTimerId = window.setTimeout(triggerCredentialRefresh, refreshIn);

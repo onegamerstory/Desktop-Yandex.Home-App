@@ -54,6 +54,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
   const lastWebrtcRoomRef = useRef<import('../../types/index').YandexWebRtcRoom | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qualityMenuRef = useRef<HTMLDivElement>(null);
+  const freezeCanvasRef = useRef<HTMLCanvasElement>(null);
   const selectedQualityRef = useRef<QualityPreset>(QUALITY_PRESETS[0]);
   const prevPrivacyRef = useRef(false);
   const [cameraDevice, setCameraDevice] = useState<YandexDevice>(device);
@@ -65,7 +66,20 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(QUALITY_PRESETS[0]);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [isPictureInPicture, setIsPictureInPicture] = useState(false);
+  const [showFreezeFrame, setShowFreezeFrame] = useState(false);
   const pipSupported = typeof document !== 'undefined' && document.pictureInPictureEnabled;
+
+  const captureFreezeFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = freezeCanvasRef.current;
+    if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    setShowFreezeFrame(true);
+  }, []);
 
   const privacyEnabled = isCameraPrivacyModeEnabled(cameraDevice);
   const showPrivacyButton = hasCameraPrivacyControl(cameraDevice);
@@ -95,6 +109,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     if (document.pictureInPictureElement === videoRef.current) {
       void document.exitPictureInPicture();
     }
+    setShowFreezeFrame(false);
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.removeAttribute('src');
@@ -111,7 +126,8 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
       setPrivacyNotice(null);
       setStreamProtocol(null);
     } else {
-      // Silent reconnect: stop old tracks without clearing the video frame
+      // Silent reconnect: capture last frame before tracks are torn down
+      captureFreezeFrame();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       if (webrtcConnectionRef.current) { webrtcConnectionRef.current.cleanupSoft(); webrtcConnectionRef.current = null; }
@@ -134,6 +150,8 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
 
         const scheduleReconnect = (forceNewCredentials = false) => {
           if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          if (forceNewCredentials) captureFreezeFrame();
+          const delayMs = forceNewCredentials ? 0 : 3000;
           reconnectTimerRef.current = setTimeout(async () => {
             reconnectTimerRef.current = null;
             const v = videoRef.current;
@@ -156,7 +174,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
               }
             }
             loadStreamRef.current?.(true);
-          }, 3000);
+          }, delayMs);
         };
 
         webrtcConnectionRef.current = await connectYandexGoloomWebRtc(
@@ -208,7 +226,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [cleanupPlayer, device.id, onGetStream, privacyEnabled]);
+  }, [cleanupPlayer, device.id, onGetStream, privacyEnabled, captureFreezeFrame]);
 
   const handleTogglePrivacy = useCallback(async () => {
     setIsTogglingPrivacy(true);
@@ -271,6 +289,21 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     // Silent reconnect with the new quality (no black flash, no loading spinner)
     loadStreamRef.current?.(true);
   }, []);
+
+  // Hide freeze-frame overlay once the live stream resumes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isOpen) return;
+    const hideFreeze = () => {
+      if (video.videoWidth > 0) setShowFreezeFrame(false);
+    };
+    video.addEventListener('playing', hideFreeze);
+    video.addEventListener('resize', hideFreeze);
+    return () => {
+      video.removeEventListener('playing', hideFreeze);
+      video.removeEventListener('resize', hideFreeze);
+    };
+  }, [isOpen, streamProtocol]);
 
   // Track native PiP window open/close
   useEffect(() => {
@@ -457,6 +490,10 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
             playsInline
             muted
             autoPlay
+          />
+          <canvas
+            ref={freezeCanvasRef}
+            className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${showFreezeFrame ? 'z-[5]' : 'hidden'}`}
           />
 
           {isLoading && (
