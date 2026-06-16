@@ -5,7 +5,9 @@ const VIDEO_TIMEOUT_MS = 30000;
 /** Interval for application-level pings to prevent NAT/idle WS timeouts */
 const KEEPALIVE_INTERVAL_MS = 25000;
 /** Refresh credentials this many ms before JWT expiry */
-const JWT_REFRESH_LEAD_MS = 30000;
+const JWT_REFRESH_LEAD_MS = 60000;
+/** Fast-path may reuse cached room JWT only if it remains valid at least this long */
+export const JWT_FAST_REUSE_MIN_TTL_MS = 90_000;
 
 const log = (...args: unknown[]) => console.log('[Goloom]', ...args);
 const logErr = (...args: unknown[]) => console.error('[Goloom]', ...args);
@@ -252,10 +254,12 @@ export const connectYandexGoloomWebRtc = async (
     video: HTMLVideoElement,
     onDisconnect?: () => void,
     initialQuality: { width: number; height: number } = { width: 2560, height: 1440 },
+    onCredentialRefresh?: () => void,
 ): Promise<GoloomConnection> => {
     const pendingCandidates: RTCIceCandidateInit[] = [];
     const state = { remoteDescSet: false };
     let closed = false;
+    let intentionalClose = false;
 
     // Map of transceiver mid → MediaStream, populated by ontrack
     const videoStreams = new Map<string, MediaStream>();
@@ -421,6 +425,7 @@ export const connectYandexGoloomWebRtc = async (
     })();
 
     messageLoop.catch((err) => {
+        if (intentionalClose) return;
         logErr('messageLoop error:', err);
         doCleanup(ws, pc, true);
     });
@@ -550,21 +555,30 @@ export const connectYandexGoloomWebRtc = async (
         }, KEEPALIVE_INTERVAL_MS);
 
         // ── Proactive JWT refresh ─────────────────────────────────────────────
-        // The room credentials are a JWT with an `exp` claim.  When it expires the
-        // server closes the WS — causing the visible "reconnecting" flash.  We
-        // trigger a soft reconnect 30 s before expiry so the user never sees it.
+        // Room credentials are a short-lived JWT (~5 min).  Before it expires we
+        // trigger a reconnect that must fetch fresh credentials via create-room.
         const jwtExp = decodeJwtExp(room.credentials);
         if (jwtExp !== null) {
             const msLeft = jwtExp - Date.now();
             const refreshIn = msLeft - JWT_REFRESH_LEAD_MS;
             log(`JWT exp in ${Math.round(msLeft / 1000)} s — proactive refresh scheduled in ${Math.round(refreshIn / 1000)} s`);
-            if (refreshIn > 5000) {
-                jwtRefreshTimerId = window.setTimeout(() => {
-                    if (closed) return;
-                    log('JWT expiring soon — triggering proactive soft reconnect');
-                    doCleanup(ws, pc, false, true); // keep last video frame visible
+            const triggerCredentialRefresh = () => {
+                if (closed) return;
+                log('JWT expiring soon — triggering credential refresh reconnect');
+                intentionalClose = true;
+                doCleanup(ws, pc, false, true);
+                if (onCredentialRefresh) {
+                    onCredentialRefresh();
+                } else {
                     onDisconnect?.();
-                }, refreshIn);
+                }
+            };
+            if (refreshIn > 5000) {
+                jwtRefreshTimerId = window.setTimeout(triggerCredentialRefresh, refreshIn);
+            } else if (msLeft > 5000) {
+                jwtRefreshTimerId = window.setTimeout(triggerCredentialRefresh, 1000);
+            } else {
+                log('JWT nearly expired on connect — will rely on disconnect handler');
             }
         } else {
             log('JWT exp not found in credentials — relying on server-close for reconnect');

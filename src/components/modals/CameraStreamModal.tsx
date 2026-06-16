@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { YandexDevice, CameraStreamResult, YandexWebRtcRoom } from '../../types/index';
-import { connectYandexGoloomWebRtc, GoloomConnection } from '../../services/yandexGoloomWebRtc';
+import { connectYandexGoloomWebRtc, GoloomConnection, JWT_FAST_REUSE_MIN_TTL_MS } from '../../services/yandexGoloomWebRtc';
 
-/** Returns false if the room JWT is expired or will expire within 15 s. */
+/** Returns false if the room JWT is expired or will expire soon (fast-path unsafe). */
 const isRoomCredentialFresh = (room: YandexWebRtcRoom): boolean => {
   try {
     const b64 = room.credentials.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/');
     if (!b64) return true;
     const payload = JSON.parse(atob(b64)) as Record<string, unknown>;
     if (typeof payload.exp !== 'number') return true;
-    return payload.exp * 1000 > Date.now() + 15000;
+    return payload.exp * 1000 > Date.now() + JWT_FAST_REUSE_MIN_TTL_MS;
   } catch {
     return true;
   }
@@ -22,7 +22,7 @@ import {
   mergeCameraDeviceState,
   getCameraPrivacyInstance,
 } from '../../constants';
-import { X, RefreshCw, Loader2, Video, AlertCircle, Eye, EyeOff, Maximize2, Settings2 } from 'lucide-react';
+import { X, RefreshCw, Loader2, Video, AlertCircle, Eye, EyeOff, Maximize2, Settings2, PictureInPicture2 } from 'lucide-react';
 
 const QUALITY_PRESETS = [
   { label: 'High', width: 2560, height: 1440 },
@@ -64,6 +64,8 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
   const [privacyNotice, setPrivacyNotice] = useState<string | null>(null);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(QUALITY_PRESETS[0]);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [isPictureInPicture, setIsPictureInPicture] = useState(false);
+  const pipSupported = typeof document !== 'undefined' && document.pictureInPictureEnabled;
 
   const privacyEnabled = isCameraPrivacyModeEnabled(cameraDevice);
   const showPrivacyButton = hasCameraPrivacyControl(cameraDevice);
@@ -89,6 +91,9 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     if (webrtcConnectionRef.current) {
       webrtcConnectionRef.current.cleanup();
       webrtcConnectionRef.current = null;
+    }
+    if (document.pictureInPictureElement === videoRef.current) {
+      void document.exitPictureInPicture();
     }
     if (videoRef.current) {
       videoRef.current.pause();
@@ -126,34 +131,41 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
 
       if (stream.protocol === 'webrtc' && stream.webrtc) {
         lastWebrtcRoomRef.current = stream.webrtc;
-        const onDisconnect = () => {
+
+        const scheduleReconnect = (forceNewCredentials = false) => {
           if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          // 3 s grace period so the server has time to release the old peer slot
-          // (prevents "too many peers" when the camera firmware has a small peer limit)
           reconnectTimerRef.current = setTimeout(async () => {
             reconnectTimerRef.current = null;
             const v = videoRef.current;
             if (!v) return;
-            // Fast path: reuse cached room credentials ONLY if the JWT is still fresh.
-            // If it has expired (that's why the server closed the WS), skip straight to
-            // the full HTTP reconnect so we get new credentials.
+            if (forceNewCredentials) {
+              lastWebrtcRoomRef.current = null;
+            }
             const cached = lastWebrtcRoomRef.current;
             if (cached && isRoomCredentialFresh(cached)) {
               if (webrtcConnectionRef.current) { webrtcConnectionRef.current.cleanupSoft(); webrtcConnectionRef.current = null; }
               try {
-                webrtcConnectionRef.current = await connectYandexGoloomWebRtc(cached, v, onDisconnect, selectedQualityRef.current);
+                webrtcConnectionRef.current = await connectYandexGoloomWebRtc(
+                  cached, v, () => scheduleReconnect(false), selectedQualityRef.current,
+                  () => scheduleReconnect(true),
+                );
                 return;
               } catch (err) {
-                // If server still busy (too many peers), wait another 3 s then do full reconnect
                 const isBusy = err instanceof Error && /слишком много|too.?many/i.test(err.message);
                 if (isBusy) await new Promise(r => window.setTimeout(r, 3000));
-                // Fall back to full reconnect
               }
             }
             loadStreamRef.current?.(true);
           }, 3000);
         };
-        webrtcConnectionRef.current = await connectYandexGoloomWebRtc(stream.webrtc, video, onDisconnect, selectedQualityRef.current);
+
+        webrtcConnectionRef.current = await connectYandexGoloomWebRtc(
+          stream.webrtc,
+          video,
+          () => scheduleReconnect(false),
+          selectedQualityRef.current,
+          () => scheduleReconnect(true),
+        );
         return;
       }
 
@@ -233,6 +245,20 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     refreshCameraDevice,
   ]);
 
+  const handleTogglePictureInPicture = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || !pipSupported) return;
+    try {
+      if (document.pictureInPictureElement === video) {
+        await document.exitPictureInPicture();
+      } else {
+        await video.requestPictureInPicture();
+      }
+    } catch {
+      // User cancelled or PiP not allowed (e.g. video not playing yet)
+    }
+  }, [pipSupported]);
+
   const handleQualityChange = useCallback((preset: QualityPreset) => {
     setSelectedQuality(preset);
     selectedQualityRef.current = preset;
@@ -245,6 +271,20 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     // Silent reconnect with the new quality (no black flash, no loading spinner)
     loadStreamRef.current?.(true);
   }, []);
+
+  // Track native PiP window open/close
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onEnter = () => setIsPictureInPicture(true);
+    const onLeave = () => setIsPictureInPicture(false);
+    video.addEventListener('enterpictureinpicture', onEnter);
+    video.addEventListener('leavepictureinpicture', onLeave);
+    return () => {
+      video.removeEventListener('enterpictureinpicture', onEnter);
+      video.removeEventListener('leavepictureinpicture', onLeave);
+    };
+  }, [isOpen, streamProtocol]);
 
   // Close quality menu when clicking outside
   useEffect(() => {
@@ -367,6 +407,20 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
                   <EyeOff className="w-4 h-4" />
                 )}
                 {privacyEnabled ? 'Отключить приватность' : 'Включить приватность'}
+              </button>
+            )}
+            {pipSupported && (
+              <button
+                onClick={() => { void handleTogglePictureInPicture(); }}
+                disabled={isLoading || !streamProtocol}
+                className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
+                  isPictureInPicture
+                    ? 'text-purple-600 dark:text-primary bg-purple-50 dark:bg-primary/20'
+                    : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+                title={isPictureInPicture ? 'Закрыть окно поверх других' : 'Окно поверх других приложений'}
+              >
+                <PictureInPicture2 className="w-5 h-5" />
               </button>
             )}
             <button
