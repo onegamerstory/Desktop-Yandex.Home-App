@@ -1,4 +1,4 @@
-import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexModeAction } from '../types/index';
+import { YandexUserInfoResponse, YandexDevice, YandexRoom, YandexModeAction, CameraStreamResult } from '../types/index';
 
 const yandexApi = window.api;
 
@@ -705,6 +705,37 @@ export const toggleGroup = async (token: string, groupId: string, deviceIds: str
         console.log('Группа переключена успешно.');
     } catch (error) {
         console.error('Ошибка при переключении группы через IPC:', error);
+        throw error;
+    }
+};
+
+export const getCameraStream = async (deviceId: string): Promise<CameraStreamResult> => {
+    try {
+        return await yandexApi.getCameraStream(deviceId);
+    } catch (error) {
+        console.error('Ошибка при получении видеопотока через IPC:', error);
+        throw error;
+    }
+};
+
+export const setCameraPrivacyMode = async (
+    deviceId: string,
+    privacyEnabled: boolean,
+    toggleInstance = 'privacy',
+): Promise<void> => {
+    try {
+        await yandexApi.setCameraPrivacyMode(deviceId, privacyEnabled, toggleInstance);
+    } catch (error) {
+        console.error('Ошибка при изменении режима приватности камеры:', error);
+        throw error;
+    }
+};
+
+export const getQuasarCameraDevice = async (deviceId: string): Promise<YandexDevice> => {
+    try {
+        return await yandexApi.getQuasarCameraDevice(deviceId);
+    } catch (error) {
+        console.error('Ошибка при получении камеры из Quasar:', error);
         throw error;
     }
 };

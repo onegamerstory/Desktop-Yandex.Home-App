@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TokenInput } from './components/TokenInput';
 import { Dashboard } from './components/Dashboard';
 import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
-import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode } from './services/yandexIoT';
+import { QrAuthModal } from './components/modals/QrAuthModal';
+import { fetchUserInfo, executeScenario, toggleDevice, toggleGroup, setDeviceMode, getCameraStream, setCameraPrivacyMode } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexRoom, YandexScenario, YandexGroup, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index'; 
-import { formatSensorValueForTray } from './constants';
+import { formatSensorValueForTray, isCameraDevice } from './constants';
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import packageJson from '../package.json';
@@ -95,6 +96,8 @@ function App() {
   // Состояние для уведомления об обновлении
   const [showUpdateNotification, setShowUpdateNotification] = useState<boolean>(false);
   const [updateInfo, setUpdateInfo] = useState<{latestVersion: string, releaseUrl: string, releaseDate: string} | null>(null);
+  const [showQrAuth, setShowQrAuth] = useState(false);
+  const qrAuthPromiseRef = useRef<{ resolve: (value: boolean) => void } | null>(null);
 
   // Ref для userData, чтобы избежать пересоздания refreshDashboardData при обновлении данных
   const userDataRef = useRef(userData);
@@ -227,6 +230,37 @@ function App() {
     		}
     	}
  	}, [showNotification, stableSortData, hasDeviceStateChanges]);
+
+  const promptXTokenIfNeeded = useCallback(async (data: YandexUserInfoResponse) => {
+    const hasCameras = data.devices.some(isCameraDevice);
+    if (!hasCameras) {
+      return;
+    }
+    const hasXToken = await yandexApi.hasXToken();
+    if (!hasXToken) {
+      setShowQrAuth(true);
+    }
+  }, []);
+
+  const requestXTokenAuth = useCallback((): Promise<boolean> => {
+    return new Promise((resolve) => {
+      qrAuthPromiseRef.current = { resolve };
+      setShowQrAuth(true);
+    });
+  }, []);
+
+  const handleQrAuthSuccess = useCallback(() => {
+    setShowQrAuth(false);
+    qrAuthPromiseRef.current?.resolve(true);
+    qrAuthPromiseRef.current = null;
+    showNotification('Доступ к камерам настроен', 'success');
+  }, [showNotification]);
+
+  const handleQrAuthClose = useCallback(() => {
+    setShowQrAuth(false);
+    qrAuthPromiseRef.current?.resolve(false);
+    qrAuthPromiseRef.current = null;
+  }, []);
   
 	// Функция для инициализации и авторизации (меняет appState)
 	const loadData = useCallback(async (apiToken: string) => {
@@ -244,6 +278,7 @@ function App() {
             return households.length > 0 ? households[0].id : null;
           });
 		  setAppState(AppState.DASHBOARD);
+      await promptXTokenIfNeeded(sortedData);
 		} catch (err: unknown) {
 		  if (err instanceof Error) {
 			setErrorMsg(err.message);
@@ -258,7 +293,7 @@ function App() {
 			  setToken(null);
 		  }
 		}
-	  }, [stableSortData]);
+	  }, [stableSortData, promptXTokenIfNeeded]);
 
   // Переключение активного дома (round-robin)
   const handleSwitchHousehold = useCallback(() => {
@@ -386,6 +421,31 @@ function App() {
      			throw err;
    		}
  	}, [token, refreshDashboardData, showNotification]);
+
+	const handleGetCameraStream = useCallback(async (deviceId: string) => {
+    const isXTokenError = (message: string) =>
+      message.includes('X_TOKEN_REQUIRED')
+      || message.includes('Quasar auth')
+      || message.includes('x-token');
+
+    try {
+      return await getCameraStream(deviceId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (isXTokenError(message)) {
+        const authenticated = await requestXTokenAuth();
+        if (authenticated) {
+          return getCameraStream(deviceId);
+        }
+        throw new Error('Требуется вход по QR для просмотра камер');
+      }
+      throw err;
+    }
+	}, [requestXTokenAuth]);
+
+	const handleSetCameraPrivacy = useCallback(async (deviceId: string, privacyEnabled: boolean, toggleInstance?: string) => {
+		await setCameraPrivacyMode(deviceId, privacyEnabled, toggleInstance);
+	}, []);
 	
 	// Обработчик отправки токена
   	const handleTokenSubmit = async (newToken: string) => {
@@ -495,6 +555,7 @@ function App() {
           });
           console.log('[App] Setting state to DASHBOARD');
           setAppState(AppState.DASHBOARD);
+          await promptXTokenIfNeeded(sortedData);
         } catch (err) {
           console.error('[App] Error loading user data:', err);
           if (err instanceof Error) {
@@ -517,7 +578,7 @@ function App() {
     };
     
     checkToken();
-  }, []); // Пустой массив зависимостей - запускаем только один раз при монтировании
+  }, [promptXTokenIfNeeded]); // Пустой массив зависимостей - запускаем только один раз при монтировании
 
 	// --- 1.1 useEffect: Слушаем события повторных попыток подключения ---
 	useEffect(() => {
@@ -751,6 +812,8 @@ useEffect(() => {
           onToggleDevice={handleToggleDevice}
           onToggleGroup={handleToggleGroup}
           onSetDeviceMode={handleSetDeviceMode}
+          onGetCameraStream={handleGetCameraStream}
+          onSetCameraPrivacy={handleSetCameraPrivacy}
 		      onRefresh={() => token && refreshDashboardData(token)}
           isRefreshing={isRefreshing}
 		      favoriteDeviceIds={favoriteDeviceIds}
@@ -772,6 +835,11 @@ useEffect(() => {
             releaseDate={updateInfo.releaseDate}
           />
         )}
+        <QrAuthModal
+          isOpen={showQrAuth}
+          onClose={handleQrAuthClose}
+          onSuccess={handleQrAuthSuccess}
+        />
         <NotificationToast />
       </ThemeProvider>
     );

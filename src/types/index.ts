@@ -20,7 +20,7 @@ export interface YandexModeAction {
 
 export interface YandexCapabilityState {
   instance: string;
-  value: boolean | number | string;
+  value: boolean | number | string | Record<string, unknown>;
 }
 
 export interface YandexModeOption {
@@ -107,6 +107,20 @@ export interface YandexUserInfoResponse {
   devices: YandexDevice[];
   scenarios: YandexScenario[];
   households: YandexHousehold[];
+}
+
+export interface YandexWebRtcRoom {
+  serviceUrl: string;
+  serviceName: string;
+  roomId: string;
+  participantId: string;
+  credentials: string;
+}
+
+export interface CameraStreamResult {
+  protocol: string;
+  streamUrl?: string;
+  webrtc?: YandexWebRtcRoom;
 }
 
 export enum AppState {

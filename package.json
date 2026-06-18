@@ -1,7 +1,7 @@
 {
   "name": "yandex-smart-home-control",
   "private": true,
-  "version": "1.7.5",
+  "version": "1.8.2",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -12,28 +12,29 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "fetch-cookie": "^3.2.0",
+    "hls.js": "^1.6.16",
     "keytar": "^7.9.0",
     "lucide-react": "^0.555.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tough-cookie": "^6.0.1"
   },
   "devDependencies": {
     "@types/keytar": "^4.4.0",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.20",
-    "electron": "^39.2.4",
+    "electron": "^39.8.10",
     "electron-builder": "^25.1.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   },
-  
-
   "author": "История Одного Геймера <gamecuts0412@gmail.com>",
   "description": "Yandex Smart Home Control Application",
-  
   "build": {
     "appId": "com.onegamerstory.smarthomecontrol",
     "productName": "Yandex Smart Home Control",
@@ -43,19 +44,16 @@
       "dist/**/*",
       "electron/*.js",
       "electron/*.cjs",
-      "node_modules/**/*", 
+      "node_modules/**/*",
       "resources/*"
     ],
     "directories": {
       "output": "release"
     },
-    
-    
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico"
     },
-    
     "mac": {
       "category": "public.app-category.utilities",
       "target": "dmg",
@@ -83,9 +81,12 @@
         }
       ]
     },
-    
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "category": "Utility",
       "icon": "resources/icon.png",
       "maintainer": "История Одного Геймера <gamecuts0412@gmail.com>",

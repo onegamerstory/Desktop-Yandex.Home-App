@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup, YandexModeAction } from '../types/index';
+import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup, YandexModeAction, CameraStreamResult } from '../types/index';
 import { ScenarioCard } from './cards/ScenarioCard';
 import { DeviceCard } from './cards/DeviceCard';
 import { GroupCard } from './cards/GroupCard';
@@ -9,10 +9,11 @@ import { GroupLightSettingsModal } from './modals/GroupLightSettingsModal';
 import { GroupThermostatSettingsModal } from './modals/GroupThermostatSettingsModal';
 import { FanSettingsModal } from './modals/FanSettingsModal';
 import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
+import { CameraStreamModal } from './modals/CameraStreamModal';
 import { InfoModal } from './modals/InfoModal';
 import { LogOut, Home, SquareSquare, Lightbulb, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, Power, Info, Building2, ScrollText, Pencil } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { isLightDevice, isLightGroup } from '../constants';
+import { isLightDevice, isLightGroup, isCameraDevice } from '../constants';
 import packageJson from '../../package.json';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
@@ -27,6 +28,8 @@ interface DashboardProps {
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
   onToggleGroup: (id: string, currentState: boolean) => Promise<void>;
   onSetDeviceMode: (deviceId: string, modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn?: boolean) => Promise<void>;
+  onGetCameraStream: (deviceId: string) => Promise<CameraStreamResult>;
+  onSetCameraPrivacy: (deviceId: string, privacyEnabled: boolean, toggleInstance?: string) => Promise<void>;
   onRefresh: () => void;
   isRefreshing: boolean;
   favoriteDeviceIds: string[];
@@ -49,6 +52,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onToggleDevice,
   onToggleGroup,
   onSetDeviceMode,
+  onGetCameraStream,
+  onSetCameraPrivacy,
   onRefresh,
   isRefreshing,
   favoriteDeviceIds,
@@ -68,6 +73,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedLightGroup, setSelectedLightGroup] = useState<YandexGroup | null>(null);
   const [selectedThermostatGroup, setSelectedThermostatGroup] = useState<YandexGroup | null>(null);
   const [selectedFanGroup, setSelectedFanGroup] = useState<YandexGroup | null>(null);
+  const [selectedCameraDevice, setSelectedCameraDevice] = useState<YandexDevice | null>(null);
   const { theme, toggleTheme } = useTheme();
 
   // Вспомогательные функции для работы с localStorage с учетом householdId
@@ -461,6 +467,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedFanGroup(null);
   }, []);
 
+  const handleOpenCameraStream = useCallback((device: YandexDevice) => {
+    setSelectedCameraDevice(device);
+  }, []);
+
+  const handleCloseCameraStream = useCallback(() => {
+    setSelectedCameraDevice(null);
+  }, []);
+
+  const handleOpenDeviceSettings = useCallback((device: YandexDevice) => {
+    if (isCameraDevice(device)) {
+      handleOpenCameraStream(device);
+      return;
+    }
+    if (isLightDevice(device.type)) {
+      handleOpenLightSettings(device);
+    } else if (device.type === 'devices.types.ventilation.fan') {
+      handleOpenFanSettings(device);
+    } else {
+      handleOpenThermostatSettings(device);
+    }
+  }, [handleOpenCameraStream, handleOpenFanSettings, handleOpenLightSettings, handleOpenThermostatSettings]);
+
   const handleApplyLightBrightness = useCallback(async (settings: {
     brightness?: number;
     hsv?: { h: number; s: number; v: number };
@@ -799,15 +827,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 										onToggle={onToggleDevice} 
 										isFavorite={true} 
 										onToggleFavorite={onToggleDeviceFavorite}
-										onOpenSettings={(dev) => {
-											if (isLightDevice(dev.type)) {
-												handleOpenLightSettings(dev);
-											} else if (dev.type === 'devices.types.ventilation.fan') {
-												handleOpenFanSettings(dev);
-											} else {
-												handleOpenThermostatSettings(dev);
-											}
-										}}
+										onOpenSettings={handleOpenDeviceSettings}
+										onOpenCameraStream={handleOpenCameraStream}
 										isEditMode={isEditMode}
 										iconHiddenState={getIconHiddenState(cardId)}
 										onToggleVisibility={() => toggleCardVisibility(cardId)}
@@ -834,15 +855,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 									onToggleDeviceFavorite={onToggleDeviceFavorite}
 									isFavorite={true}
 									onToggleFavorite={onToggleGroupFavorite}
-									onOpenSettings={(device) => {
-										if (isLightDevice(device.type)) {
-											handleOpenLightSettings(device);
-										} else if (device.type === 'devices.types.ventilation.fan') {
-											handleOpenFanSettings(device);
-										} else {
-											handleOpenThermostatSettings(device);
-										}
-									}}
+									onOpenSettings={handleOpenDeviceSettings}
+									onOpenCameraStream={handleOpenCameraStream}
 									onOpenGroupSettings={(group) => {
 										const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
 										const isLightGroupCheck = isLightGroup(groupDevices);
@@ -960,15 +974,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       onToggleDeviceFavorite={onToggleDeviceFavorite}
                       isFavorite={favoriteGroupIds.includes(group.id)}
                       onToggleFavorite={onToggleGroupFavorite}
-                      onOpenSettings={(device) => {
-                        if (isLightDevice(device.type)) {
-                          handleOpenLightSettings(device);
-                        } else if (device.type === 'devices.types.ventilation.fan') {
-                          handleOpenFanSettings(device);
-                        } else {
-                          handleOpenThermostatSettings(device);
-                        }
-                      }}
+                      onOpenSettings={handleOpenDeviceSettings}
+                      onOpenCameraStream={handleOpenCameraStream}
                       onOpenGroupSettings={(group) => {
                         const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
                         const isLightGroupCheck = isLightGroup(groupDevices);
@@ -1032,15 +1039,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 onToggle={onToggleDevice} 
                                 isFavorite={favoriteDeviceIds.includes(device.id)} 
                                 onToggleFavorite={onToggleDeviceFavorite}
-                                onOpenSettings={(dev) => {
-                                  if (isLightDevice(dev.type)) {
-                                    handleOpenLightSettings(dev);
-                                  } else if (dev.type === 'devices.types.ventilation.fan') {
-                                    handleOpenFanSettings(dev);
-                                  } else {
-                                    handleOpenThermostatSettings(dev);
-                                  }
-}}
+                                onOpenSettings={handleOpenDeviceSettings}
+                                onOpenCameraStream={handleOpenCameraStream}
                                  isEditMode={isEditMode}
                                  iconHiddenState={getIconHiddenState(cardId)}
                                  onToggleVisibility={() => toggleCardVisibility(cardId)}
@@ -1087,15 +1087,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                              onToggle={onToggleDevice} 
                                              isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                              onToggleFavorite={onToggleDeviceFavorite}
-                                             onOpenSettings={(device) => {
-                                               if (isLightDevice(device.type)) {
-                                                 handleOpenLightSettings(device);
-                                               } else if (device.type === 'devices.types.ventilation.fan') {
-                                                 handleOpenFanSettings(device);
-                                               } else {
-                                                 handleOpenThermostatSettings(device);
-                                               }
-                                             }}
+                                             onOpenSettings={handleOpenDeviceSettings}
+                                             onOpenCameraStream={handleOpenCameraStream}
                                              isEditMode={isEditMode}
                                              iconHiddenState={getIconHiddenState(cardId)}
                                              onToggleVisibility={() => toggleCardVisibility(cardId)}
@@ -1145,15 +1138,8 @@ return (
                                         onToggle={onToggleDevice} 
                                         isFavorite={favoriteDeviceIds.includes(dev.id)} 
                                         onToggleFavorite={onToggleDeviceFavorite}
-                                        onOpenSettings={(device) => {
-                                          if (isLightDevice(device.type)) {
-                                            handleOpenLightSettings(device);
-                                          } else if (device.type === 'devices.types.ventilation.fan') {
-                                            handleOpenFanSettings(device);
-                                          } else {
-                                            handleOpenThermostatSettings(device);
-                                          }
-                                        }}
+                                        onOpenSettings={handleOpenDeviceSettings}
+                                        onOpenCameraStream={handleOpenCameraStream}
                                         isEditMode={isEditMode}
                                         iconHiddenState={getIconHiddenState(cardId)}
                                         onToggleVisibility={() => toggleCardVisibility(cardId)}
@@ -1271,6 +1257,17 @@ return (
           isOpen={!!selectedFanGroup}
           onClose={handleCloseFanGroupSettings}
           onApply={handleApplyGroupFanSettings}
+        />
+      )}
+
+      {selectedCameraDevice && (
+        <CameraStreamModal
+          device={data.devices.find((item) => item.id === selectedCameraDevice.id) ?? selectedCameraDevice}
+          isOpen={!!selectedCameraDevice}
+          onClose={handleCloseCameraStream}
+          onGetStream={onGetCameraStream}
+          onSetPrivacy={onSetCameraPrivacy}
+          onPrivacyChanged={onRefresh}
         />
       )}
 
