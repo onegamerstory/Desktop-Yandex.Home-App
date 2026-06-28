@@ -87,6 +87,29 @@ function App() {
   const [favoriteScenarioIds, setFavoriteScenarioIds] = useState<string[]>(getFavorites('favoriteScenarioIds'));
   const [favoriteGroupIds, setFavoriteGroupIds] = useState<string[]>(getFavorites('favoriteGroupIds'));
   
+  // Состояние навигации сайдбара
+  const [activeSidebarView, setActiveSidebarView] = useState<'home' | 'room' | 'group'>('home');
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+
+  const handleSelectHome = useCallback(() => {
+    setActiveSidebarView('home');
+    setActiveRoomId(null);
+    setActiveGroupId(null);
+  }, []);
+
+  const handleSelectRoom = useCallback((roomId: string) => {
+    setActiveSidebarView('room');
+    setActiveRoomId(roomId);
+    setActiveGroupId(null);
+  }, []);
+
+  const handleSelectGroup = useCallback((groupId: string) => {
+    setActiveSidebarView('group');
+    setActiveRoomId(null);
+    setActiveGroupId(groupId);
+  }, []);
+
   // Состояние автозапуска
   const [isAutostartEnabled, setIsAutostartEnabled] = useState<boolean>(false);
   
@@ -824,6 +847,12 @@ useEffect(() => {
           onToggleGroupFavorite={handleToggleGroupFavorite}
           isAutostartEnabled={isAutostartEnabled}
           onToggleAutostart={handleToggleAutostart}
+          activeSidebarView={activeSidebarView}
+          activeRoomId={activeRoomId}
+          activeGroupId={activeGroupId}
+          onSelectHome={handleSelectHome}
+          onSelectRoom={handleSelectRoom}
+          onSelectGroup={handleSelectGroup}
         />
         {updateInfo && (
           <UpdateNotificationModal

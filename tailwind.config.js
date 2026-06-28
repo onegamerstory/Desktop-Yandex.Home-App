@@ -12,14 +12,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0f172a', // Slate 900
-        surface: '#1e293b', // Slate 800
-        primary: '#3b82f6', // Blue 500
-        secondary: '#64748b', // Slate 500
-        accent: '#f59e0b', // Amber 500
+        background: 'var(--bg)',
+        surface: 'var(--surface)',
+        'surface-warm': 'var(--surface-warm)',
+        primary: 'var(--accent)',
+        secondary: 'var(--fg-2)',
+        accent: 'var(--fav-star)',
+        muted: 'var(--muted)',
+        border: 'var(--border)',
+        'border-soft': 'var(--border-soft)',
+        'toggle-on': 'var(--toggle-on)',
       }
     }
   },
   plugins: [],
 }
-

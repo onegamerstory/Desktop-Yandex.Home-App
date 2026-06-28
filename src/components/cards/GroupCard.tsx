@@ -33,44 +33,35 @@ export const GroupCard: React.FC<GroupCardProps> = ({
   onOpenSettings,
   onOpenGroupSettings,
   isEditMode = false,
-  getEffectiveHidden = (id) => false,
-  getIconHiddenState = (id) => false,
+  getEffectiveHidden = (_cardId: string) => false,
+  getIconHiddenState = (_cardId: string) => false,
   onToggleDeviceVisibility,
 }) => {
   const [loading, setLoading] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Получаем устройства, относящиеся к этой группе
   const groupDevices = useMemo(() => {
     return devices.filter(d => group.devices.includes(d.id));
   }, [devices, group.devices]);
 
-  // Проверяем, является ли группа группой светильников (поддерживает все типы: light, light.ceiling, light.lamp, light.strip и т.д.)
-  const isLightGroupCheck = useMemo(() => {
-    return isLightGroup(groupDevices);
-  }, [groupDevices]);
+  const isLightGroupCheck = useMemo(() => isLightGroup(groupDevices), [groupDevices]);
 
-  // Проверяем, является ли группа группой терморегуляторов
   const isThermostatGroup = useMemo(() => {
-    return groupDevices.length > 0 && groupDevices.every(d => 
+    return groupDevices.length > 0 && groupDevices.every(d =>
       d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat'
     );
   }, [groupDevices]);
 
-  // Проверяем, является ли группа группой вентиляторов
   const isFanGroup = useMemo(() => {
     return groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.ventilation.fan');
   }, [groupDevices]);
 
-  // Определяем состояние группы: ON если все устройства включены, OFF если все выключены, иначе смешанное
   const groupIsOn = useMemo(() => {
     if (groupDevices.length === 0) return false;
-
     const onDevices = groupDevices.filter(d => {
       const onOffCapability = d.capabilities.find(c => c.type === 'devices.capabilities.on_off');
       return onOffCapability?.state?.value === true;
     });
-
     return onDevices.length === groupDevices.length;
   }, [groupDevices]);
 
@@ -78,150 +69,86 @@ export const GroupCard: React.FC<GroupCardProps> = ({
     return group.capabilities.some(c => c.type === 'devices.capabilities.on_off');
   }, [group.capabilities]);
 
-  const groupOnOffCapability = useMemo(() => {
-    return group.capabilities.find(c => c.type === 'devices.capabilities.on_off');
+  const groupIsEnabled = useMemo(() => {
+    const capability = group.capabilities.find(c => c.type === 'devices.capabilities.on_off');
+    return capability?.state?.value === true;
   }, [group.capabilities]);
-
-  const groupIsEnabled = groupOnOffCapability?.state?.value === true;
 
   const handleToggleGroup = async () => {
     if (!hasOnOffCapability || loading) return;
-
     setLoading(true);
-    try {
-      await onToggleGroup(group.id, groupIsEnabled);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    try { await onToggleGroup(group.id, groupIsOn); }
+    catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  return (
-    <div className={`bg-white dark:bg-surface border border-gray-200 dark:border-white/5 rounded-2xl p-6 ${isEditMode && getIconHiddenState(`group_${group.id}`) ? 'opacity-50 grayscale' : ''}`}>
-      {/* Заголовок группы с кнопкой переключения */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3 flex-1">
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-            )}
-          </button>
-          <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
-            {group.name}
-          </h3>
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-900 px-2 py-1 rounded-full">
-            {groupDevices.length} устройств
-          </span>
-        </div>
+  const visibleDevices = groupDevices.filter(d => !getEffectiveHidden(`device_${d.id}`));
 
-      {/* Тумблер вкл/выкл для группы */}
-        {hasOnOffCapability && (
-          <div className="flex items-center gap-2">
-            {onToggleFavorite && (
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(group.id);
-                }}
-                className={`flex-shrink-0 p-3 rounded-lg transition-all duration-300 cursor-pointer ${
-                  isFavorite
-                    ? 'text-yellow-500 dark:text-accent bg-white/80 dark:bg-surface/80 hover:bg-white dark:hover:bg-surface'
-                    : 'text-gray-400 dark:text-slate-500 hover:text-yellow-500 dark:hover:text-accent bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700'
-                }`}
-                title={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
-              >
-                <Star className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
-              </div>
-            )}
-            {isLightGroupCheck && onOpenGroupSettings && (
-              <button
-                onClick={() => onOpenGroupSettings(group)}
-                className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
-                title="Настройки освещения группы"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-            )}
-            {isThermostatGroup && onOpenGroupSettings && (
-              <button
-                onClick={() => onOpenGroupSettings(group)}
-                className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
-                title="Настройки климата группы"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-            )}
-            {isFanGroup && onOpenGroupSettings && (
-              <button
-                onClick={() => onOpenGroupSettings(group)}
-                className="flex-shrink-0 p-3 rounded-lg transition-all duration-300 bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700"
-                title="Настройки вентилятора группы"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-            )}
+  return (
+    <div className="group-wrapper" style={{ opacity: isEditMode && getIconHiddenState(`group_${group.id}`) ? 0.5 : 1, filter: isEditMode && getIconHiddenState(`group_${group.id}`) ? 'grayscale(1)' : 'none' }}>
+      <div className="group-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => setIsCollapsed(!isCollapsed)}>
+          {isCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+          <h3>{group.name}</h3>
+          <span className="sidebar-item-badge" style={{ fontSize: 11 }}>{groupDevices.length}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {onToggleFavorite && (
+            <div
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(group.id); }}
+              style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: isFavorite ? 'color-mix(in oklab, var(--fav-star) 10%, transparent)' : 'transparent', color: isFavorite ? 'var(--fav-star)' : 'var(--muted)' }}
+            >
+              <Star className="w-3.5 h-3.5" fill={isFavorite ? 'currentColor' : 'none'} />
+            </div>
+          )}
+          {(isLightGroupCheck || isThermostatGroup || isFanGroup) && onOpenGroupSettings && (
+            <button
+              onClick={() => onOpenGroupSettings(group)}
+              className="group-power-btn"
+              title="Настройки"
+            >
+              <Settings />
+            </button>
+          )}
+          {hasOnOffCapability && (
             <button
               onClick={handleToggleGroup}
               disabled={loading}
-              className={`flex-shrink-0 p-3 rounded-lg transition-all duration-300 ${
-                groupIsEnabled
-                  ? 'bg-purple-100 dark:bg-primary/20 text-purple-600 dark:text-primary hover:bg-purple-200 dark:hover:bg-primary/30'
-                  : 'bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
-              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              title={groupIsEnabled ? 'Выключить группу' : 'Включить группу'}
+              className={`group-power-btn ${groupIsOn ? 'is-on' : ''}`}
+              title={groupIsOn ? 'Выключить' : 'Включить'}
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Power className="w-5 h-5" />
-              )}
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Power />}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Список устройств в группе */}
-      {!isCollapsed && groupDevices.length > 0 && (
-        (() => {
-          const visibleGroupDevices = groupDevices.filter(d => !getEffectiveHidden(`device_${d.id}`));
-          return visibleGroupDevices.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {visibleGroupDevices.map(device => {
-                const cardId = `device_${device.id}`;
-                return (
-                  <DeviceCard
-                    key={device.id}
-                    device={device}
-                    onToggle={onToggleDevice}
-                    isFavorite={favoriteDeviceIds.includes(device.id)}
-                    onToggleFavorite={onToggleDeviceFavorite}
-                    onOpenSettings={onOpenSettings}
-                    isEditMode={isEditMode}
-                    iconHiddenState={getIconHiddenState(cardId)}
-                    onToggleVisibility={() => onToggleDeviceVisibility?.(cardId)}
-                  />
-                );
-              })}
+      {!isCollapsed && (
+        <>
+          {visibleDevices.length > 0 ? (
+            <div className="device-grid">
+              {visibleDevices.map(device => (
+                <DeviceCard
+                  key={device.id}
+                  device={device}
+                  onToggle={onToggleDevice}
+                  isFavorite={favoriteDeviceIds.includes(device.id)}
+                  onToggleFavorite={onToggleDeviceFavorite}
+                  onOpenSettings={onOpenSettings}
+                  isEditMode={isEditMode}
+                  iconHiddenState={getIconHiddenState(`device_${device.id}`)}
+                  onToggleVisibility={() => onToggleDeviceVisibility?.(`device_${device.id}`)}
+                />
+              ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Все устройства в этой группе скрыты
-            </p>
-          );
-        })()
+            <p style={{ fontSize: 13, color: 'var(--muted)' }}>Все устройства в этой группе скрыты</p>
+          )}
+        </>
       )}
 
-      {/* Если нет устройств */}
       {groupDevices.length === 0 && (
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          В этой группе нет устройств
-        </p>
+        <p style={{ fontSize: 13, color: 'var(--muted)' }}>В этой группе нет устройств</p>
       )}
     </div>
   );

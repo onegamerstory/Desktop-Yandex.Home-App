@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup, YandexModeAction, CameraStreamResult } from '../types/index';
+import { Sidebar } from './Sidebar';
+import { Toolbar } from './Toolbar';
 import { ScenarioCard } from './cards/ScenarioCard';
 import { DeviceCard } from './cards/DeviceCard';
 import { GroupCard } from './cards/GroupCard';
@@ -11,8 +13,7 @@ import { FanSettingsModal } from './modals/FanSettingsModal';
 import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
 import { CameraStreamModal } from './modals/CameraStreamModal';
 import { InfoModal } from './modals/InfoModal';
-import { LogOut, Home, SquareSquare, Lightbulb, RefreshCw, X, Star, Sun, Moon, ChevronRight, ChevronDown, Power, Info, Building2, ScrollText, Pencil } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import { SquareSquare, Lightbulb, X, Star, ChevronRight, ChevronDown, Building2, ScrollText } from 'lucide-react';
 import { isLightDevice, isLightGroup, isCameraDevice } from '../constants';
 import packageJson from '../../package.json';
 
@@ -40,6 +41,12 @@ interface DashboardProps {
   onToggleGroupFavorite: (id: string) => void;
   isAutostartEnabled: boolean;
   onToggleAutostart: () => void;
+  activeSidebarView: 'home' | 'room' | 'group';
+  activeRoomId: string | null;
+  activeGroupId: string | null;
+  onSelectHome: () => void;
+  onSelectRoom: (roomId: string) => void;
+  onSelectGroup: (groupId: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -64,6 +71,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onToggleGroupFavorite,
   isAutostartEnabled,
   onToggleAutostart,
+  activeSidebarView,
+  activeRoomId,
+  activeGroupId,
+  onSelectHome,
+  onSelectRoom,
+  onSelectGroup,
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -74,9 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedThermostatGroup, setSelectedThermostatGroup] = useState<YandexGroup | null>(null);
   const [selectedFanGroup, setSelectedFanGroup] = useState<YandexGroup | null>(null);
   const [selectedCameraDevice, setSelectedCameraDevice] = useState<YandexDevice | null>(null);
-  const { theme, toggleTheme } = useTheme();
 
-  // Вспомогательные функции для работы с localStorage с учетом householdId
   const getStorageKey = (baseKey: string, householdId: string | null): string => {
     if (!householdId) return baseKey;
     return `${baseKey}:household:${householdId}`;
@@ -87,18 +98,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const key = getStorageKey(baseKey, householdId);
       const stored = localStorage.getItem(key);
       return stored !== null ? JSON.parse(stored) : defaultValue;
-    } catch (e) {
-      return defaultValue;
-    }
+    } catch { return defaultValue; }
   };
 
   const saveCollapseState = (baseKey: string, householdId: string | null, value: boolean): void => {
     try {
       const key = getStorageKey(baseKey, householdId);
       localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      console.error(`Error saving collapse state for ${baseKey}:`, e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const loadCollapsedRooms = (householdId: string | null): Set<string> => {
@@ -106,21 +113,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const key = getStorageKey('dashboard:collapsedRooms', householdId);
       const stored = localStorage.getItem(key);
       return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch (e) {
-      return new Set();
-    }
+    } catch { return new Set(); }
   };
 
   const saveCollapsedRooms = (householdId: string | null, rooms: Set<string>): void => {
     try {
       const key = getStorageKey('dashboard:collapsedRooms', householdId);
       localStorage.setItem(key, JSON.stringify(Array.from(rooms)));
-    } catch (e) {
-      console.error('Error saving collapsed rooms:', e);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  // Состояние сворачивания секций (загружаем из localStorage с учетом текущего дома)
   const [isScenariosCollapsed, setIsScenariosCollapsed] = useState(() => 
     loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false)
   );
@@ -137,45 +139,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     loadCollapseState('dashboard:unassignedDevicesCollapsed', activeHouseholdId, false)
   );
 
-  // Режим редактирования дашборда
   const [isEditMode, setIsEditMode] = useState(false);
   
-  // Состояние скрытых карточек (сохраняется только при выходе из режима редактирования)
   const [hiddenCardIds, setHiddenCardIds] = useState<Set<string>>(() => {
     try {
       const key = getStorageKey('dashboard:hiddenCardIds', activeHouseholdId);
       const stored = localStorage.getItem(key);
       return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch (e) {
-      return new Set();
-    }
+    } catch { return new Set(); }
   });
 
-  // Локальное состояние для отслеживания изменений видимости в режиме редактирования
-  // Map<cardId, boolean> - true = скрыть, false = показать (относительно изначального состояния)
   const [visibilityChanges, setVisibilityChanges] = useState<Map<string, boolean>>(new Map());
 
-  // Сохранение скрытых карточек
   const saveHiddenCardIds = (householdId: string | null, ids: Set<string>) => {
     try {
       const key = getStorageKey('dashboard:hiddenCardIds', householdId);
       localStorage.setItem(key, JSON.stringify(Array.from(ids)));
-    } catch (e) {
-      console.error('Error saving hidden card ids:', e);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  // Переключение режима редактирования
   const toggleEditMode = () => {
     if (isEditMode) {
-      // Выходим из режима редактирования - применяем изменения
       const newHidden: Set<string> = new Set(hiddenCardIds);
       visibilityChanges.forEach((shouldHide, cardId) => {
-        if (shouldHide) {
-          newHidden.add(cardId);
-        } else {
-          newHidden.delete(cardId);
-        }
+        if (shouldHide) newHidden.add(cardId);
+        else newHidden.delete(cardId);
       });
       setHiddenCardIds(newHidden);
       saveHiddenCardIds(activeHouseholdId, newHidden);
@@ -184,47 +172,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setIsEditMode(prev => !prev);
   };
 
-  // Вычислить effective состояние с учётом изменений
   const getEffectiveWithChanges = (cardId: string): boolean => {
     const baseHidden = hiddenCardIds.has(cardId);
-    if (visibilityChanges.has(cardId)) {
-      return visibilityChanges.get(cardId)!;
-    }
+    if (visibilityChanges.has(cardId)) return visibilityChanges.get(cardId)!;
     return baseHidden;
   };
 
-  // Переключение видимости карточки (в режиме редактирования работает с changes состоянием)
   const toggleCardVisibility = (cardId: string) => {
     const newChanges = new Map(visibilityChanges);
     const currentEffective = getEffectiveWithChanges(cardId);
-    
-    // Переключаем состояние
     newChanges.set(cardId, !currentEffective);
     setVisibilityChanges(newChanges);
   };
 
-  // Получить effective состояние скрытия (в режиме редактирования не скрываем карточки, только показываем состояние)
   const getEffectiveHidden = (cardId: string): boolean => {
-    if (isEditMode) {
-      return false;
-    }
+    if (isEditMode) return false;
     return hiddenCardIds.has(cardId);
   };
 
-  // Получить состояние для отображения иконки (true = eye-off, false = eye)
   const getIconHiddenState = (cardId: string): boolean => {
     if (isEditMode) {
-      // Применяем изменения к текущему состоянию
       const baseHidden = hiddenCardIds.has(cardId);
-      if (visibilityChanges.has(cardId)) {
-        return visibilityChanges.get(cardId)!;
-      }
+      if (visibilityChanges.has(cardId)) return visibilityChanges.get(cardId)!;
       return baseHidden;
     }
     return hiddenCardIds.has(cardId);
   };
 
-  // Обновляем состояние при переключении дома
   useEffect(() => {
     setIsScenariosCollapsed(loadCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, false));
     setIsGroupsCollapsed(loadCollapseState('dashboard:groupsCollapsed', activeHouseholdId, false));
@@ -235,9 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const key = getStorageKey('dashboard:hiddenCardIds', activeHouseholdId);
       const stored = localStorage.getItem(key);
       setHiddenCardIds(stored ? new Set(JSON.parse(stored)) : new Set());
-    } catch (e) {
-      setHiddenCardIds(new Set());
-    }
+    } catch { setHiddenCardIds(new Set()); }
     setVisibilityChanges(new Map());
   }, [activeHouseholdId]);
 
@@ -261,11 +233,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const toggleRoom = (roomId: string) => {
     const newCollapsedRooms: Set<string> = new Set(collapsedRooms);
-    if (newCollapsedRooms.has(roomId)) {
-      newCollapsedRooms.delete(roomId);
-    } else {
-      newCollapsedRooms.add(roomId);
-    }
+    if (newCollapsedRooms.has(roomId)) newCollapsedRooms.delete(roomId);
+    else newCollapsedRooms.add(roomId);
     setCollapsedRooms(newCollapsedRooms);
     saveCollapsedRooms(activeHouseholdId, newCollapsedRooms);
   };
@@ -276,7 +245,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     saveCollapseState('dashboard:unassignedDevicesCollapsed', activeHouseholdId, newValue);
   };
 
-  // Текущий дом и индикатор наличия нескольких домов
   const currentHousehold = useMemo(() => {
     if (!households || households.length === 0) return null;
     if (activeHouseholdId) {
@@ -289,7 +257,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const homeName = currentHousehold?.name || DEFAULT_HOME_NAME;
   const hasMultipleHomes = (households?.length || 0) > 1;
 
-  // Фильтрация сущностей по текущему дому
   const roomsForHome = useMemo(() => {
     if (!currentHousehold) return data.rooms;
     return data.rooms.filter(room => room.household_id === currentHousehold.id);
@@ -304,95 +271,52 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const devicesForHome = useMemo(() => {
     if (!currentHousehold) return data.devices;
-
     return data.devices.filter(device => {
       const anyDevice = device as any;
       const deviceHouseholdId: string | undefined = anyDevice.household_id;
-
-      if (deviceHouseholdId) {
-        return deviceHouseholdId === currentHousehold.id;
-      }
-
-      // Если household_id нет, привязываем устройство к дому через комнату
-      if (device.room && roomIdsForHome.has(device.room)) {
-        return true;
-      }
-
+      if (deviceHouseholdId) return deviceHouseholdId === currentHousehold.id;
+      if (device.room && roomIdsForHome.has(device.room)) return true;
       return false;
     });
   }, [data.devices, currentHousehold, roomIdsForHome]);
 
-  // Карта соответствия deviceId -> householdId (по данным устройств и комнат)
   const deviceHouseholdMap = useMemo(() => {
     const map = new Map<string, string>();
-
     data.devices.forEach(device => {
       const anyDevice = device as any;
       let householdId: string | undefined =
         typeof anyDevice.household_id === 'string' ? anyDevice.household_id : undefined;
-
       if (!householdId && device.room) {
         const room = data.rooms.find(r => r.id === device.room);
-        if (room) {
-          householdId = room.household_id;
-        }
+        if (room) householdId = room.household_id;
       }
-
-      if (householdId) {
-        map.set(device.id, householdId);
-      }
+      if (householdId) map.set(device.id, householdId);
     });
-
-    // Дополняем карту устройствами, которые есть только в списке комнат
     data.rooms.forEach(room => {
-      const householdId = room.household_id;
       room.devices.forEach(deviceId => {
-        if (!map.has(deviceId)) {
-          map.set(deviceId, householdId);
-        }
+        if (!map.has(deviceId)) map.set(deviceId, room.household_id);
       });
     });
-
     return map;
   }, [data.devices, data.rooms]);
 
   const isScenarioInCurrentHome = useCallback(
     (scenario: YandexScenario) => {
-      // Если API не вернул несколько домов, оставляем поведение "один дом" и не фильтруем.
-      if (!households || households.length <= 1) {
-        return true;
-      }
-
-      // В режиме нескольких домов сценарий должен быть жёстко привязан к дому через устройства.
+      if (!households || households.length <= 1) return true;
       if (!currentHousehold) return false;
-
       const steps = scenario.steps || [];
-
-      // Собираем items из steps[].parameters.items[]
       const items: Array<{ id: string }> = [];
       for (const step of steps) {
         if (!step?.parameters?.items) continue;
-        for (const it of step.parameters.items) {
-          items.push(it);
-        }
+        for (const it of step.parameters.items) items.push(it);
       }
-
-      // Если в сценарии нет информации об устройствах — показываем его (не можем отфильтровать)
       if (items.length === 0) return true;
-
       const targetHouseholdId = currentHousehold.id;
-
       for (const item of items) {
         const deviceId = typeof item.id === 'string' ? item.id : null;
         if (!deviceId) continue;
-
-        const deviceHouseholdId = deviceHouseholdMap.get(deviceId);
-        if (deviceHouseholdId === targetHouseholdId) {
-          return true;
-        }
+        if (deviceHouseholdMap.get(deviceId) === targetHouseholdId) return true;
       }
-
-      // Ни одно из устройств сценария не относится к текущему дому — исключаем сценарий.
       return false;
     },
     [households, currentHousehold, deviceHouseholdMap]
@@ -424,7 +348,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const handleApplyThermostatSettings = useCallback(async (modeActions: YandexModeAction[]) => {
     if (!selectedThermostatDevice) return;
-    await onSetDeviceMode(selectedThermostatDevice.id, modeActions, true); // Включаем устройство при применении
+    await onSetDeviceMode(selectedThermostatDevice.id, modeActions, true);
   }, [selectedThermostatDevice, onSetDeviceMode]);
 
   const handleOpenLightSettings = useCallback((device: YandexDevice) => {
@@ -480,13 +404,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       handleOpenCameraStream(device);
       return;
     }
-    if (isLightDevice(device.type)) {
-      handleOpenLightSettings(device);
-    } else if (device.type === 'devices.types.ventilation.fan') {
-      handleOpenFanSettings(device);
-    } else {
-      handleOpenThermostatSettings(device);
-    }
+    if (isLightDevice(device.type)) handleOpenLightSettings(device);
+    else if (device.type === 'devices.types.ventilation.fan') handleOpenFanSettings(device);
+    else handleOpenThermostatSettings(device);
   }, [handleOpenCameraStream, handleOpenFanSettings, handleOpenLightSettings, handleOpenThermostatSettings]);
 
   const handleApplyLightBrightness = useCallback(async (settings: {
@@ -496,49 +416,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
     temperature_k?: number;
   }) => {
     if (!selectedLightDevice) return;
-
     const actions: any[] = [];
-
-    // Добавляем яркость если есть
     if (settings.brightness !== undefined) {
-      actions.push({
-        instance: 'brightness',
-        value: settings.brightness.toString(),
-        type: 'devices.capabilities.range'
-      });
+      actions.push({ instance: 'brightness', value: settings.brightness.toString(), type: 'devices.capabilities.range' });
     }
-
-    // Добавляем HSV цвет если есть
     if (settings.hsv) {
-      actions.push({
-        instance: 'hsv',
-        value: settings.hsv,
-        type: 'devices.capabilities.color_setting'
-      });
+      actions.push({ instance: 'hsv', value: settings.hsv, type: 'devices.capabilities.color_setting' });
     }
-
-    // Добавляем RGB цвет если есть
     if (settings.rgb !== undefined) {
-      actions.push({
-        instance: 'rgb',
-        value: settings.rgb,
-        type: 'devices.capabilities.color_setting'
-      });
+      actions.push({ instance: 'rgb', value: settings.rgb, type: 'devices.capabilities.color_setting' });
     }
-
-    // Добавляем температуру света если есть
     if (settings.temperature_k !== undefined) {
-      actions.push({
-        instance: 'temperature_k',
-        value: settings.temperature_k.toString(),
-        type: 'devices.capabilities.color_setting'
-      });
+      actions.push({ instance: 'temperature_k', value: settings.temperature_k.toString(), type: 'devices.capabilities.color_setting' });
     }
-
     if (actions.length > 0) {
-      await onSetDeviceMode(selectedLightDevice.id, actions, true); // Включаем устройство при применении
+      await onSetDeviceMode(selectedLightDevice.id, actions, true);
     }
-    // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedLightDevice, onSetDeviceMode]);
 
   const handleApplyGroupLightBrightness = useCallback(async (settings: {
@@ -548,78 +441,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
     temperature_k?: number;
   }) => {
     if (!selectedLightGroup) return;
-
-    // Получаем все устройства в группе
     const groupDevices = data.devices.filter(d => selectedLightGroup.devices.includes(d.id));
-
     if (groupDevices.length === 0) return;
-
-    // Отправляем одинаковые настройки для всех устройств в группе
     const updatePromises = groupDevices.map(async (device) => {
       const actions: any[] = [];
-
-      // Добавляем яркость если есть
       if (settings.brightness !== undefined) {
-        actions.push({
-          instance: 'brightness',
-          value: settings.brightness.toString(),
-          type: 'devices.capabilities.range'
-        });
+        actions.push({ instance: 'brightness', value: settings.brightness.toString(), type: 'devices.capabilities.range' });
       }
-
-      // Добавляем HSV цвет если есть
       if (settings.hsv) {
-        actions.push({
-          instance: 'hsv',
-          value: settings.hsv,
-          type: 'devices.capabilities.color_setting'
-        });
+        actions.push({ instance: 'hsv', value: settings.hsv, type: 'devices.capabilities.color_setting' });
       }
-
-      // Добавляем RGB цвет если есть
       if (settings.rgb !== undefined) {
-        actions.push({
-          instance: 'rgb',
-          value: settings.rgb,
-          type: 'devices.capabilities.color_setting'
-        });
+        actions.push({ instance: 'rgb', value: settings.rgb, type: 'devices.capabilities.color_setting' });
       }
-
-      // Добавляем температуру света если есть
       if (settings.temperature_k !== undefined) {
-        actions.push({
-          instance: 'temperature_k',
-          value: settings.temperature_k.toString(),
-          type: 'devices.capabilities.color_setting'
-        });
+        actions.push({ instance: 'temperature_k', value: settings.temperature_k.toString(), type: 'devices.capabilities.color_setting' });
       }
-
       if (actions.length > 0) {
-        await onSetDeviceMode(device.id, actions, true); // Включаем устройство при применении
+        await onSetDeviceMode(device.id, actions, true);
       }
     });
-
     await Promise.all(updatePromises);
-    // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedLightGroup, data.devices, onSetDeviceMode]);
 
   const handleApplyGroupThermostatSettings = useCallback(async (modeActions: Array<{ instance: string; value: string }>) => {
     if (!selectedThermostatGroup) return;
-
-    // Получаем все устройства в группе
     const groupDevices = data.devices.filter(d => selectedThermostatGroup.devices.includes(d.id));
-
     if (groupDevices.length === 0) return;
-
-    // Отправляем одинаковые настройки для всех устройств в группе
     const updatePromises = groupDevices.map(async (device) => {
-      if (modeActions.length > 0) {
-        await onSetDeviceMode(device.id, modeActions, true); // Включаем устройство при применении
-      }
+      if (modeActions.length > 0) await onSetDeviceMode(device.id, modeActions, true);
     });
-
     await Promise.all(updatePromises);
-    // Модальное окно остается открытым при нажатии "Применить"
   }, [selectedThermostatGroup, data.devices, onSetDeviceMode]);
 
   const handleApplyFanSettings = useCallback(async (modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean = false) => {
@@ -629,299 +481,312 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const handleApplyGroupFanSettings = useCallback(async (modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean = false) => {
     if (!selectedFanGroup) return;
-
-    // Получаем все устройства в группе
     const groupDevices = data.devices.filter(d => selectedFanGroup.devices.includes(d.id));
-
     if (groupDevices.length === 0) return;
-
-    // Отправляем одинаковые настройки для всех устройств в группе
     const updatePromises = groupDevices.map(async (device) => {
-      if (modeActions.length > 0) {
-        await onSetDeviceMode(device.id, modeActions, turnOn);
-      }
+      if (modeActions.length > 0) await onSetDeviceMode(device.id, modeActions, turnOn);
     });
-
     await Promise.all(updatePromises);
   }, [selectedFanGroup, data.devices, onSetDeviceMode]);
 
-  // Автоматическое сворачивание блока "Сценарии", если он пуст
   useEffect(() => {
-    // Проверяем, есть ли сохраненное состояние в localStorage
     const key = getStorageKey('dashboard:scenariosCollapsed', activeHouseholdId);
     const hasStoredState = localStorage.getItem(key) !== null;
-    
-    // Если сценариев нет и состояние не было сохранено пользователем, автоматически сворачиваем
     if (activeScenarios.length === 0 && !hasStoredState) {
       setIsScenariosCollapsed(true);
       saveCollapseState('dashboard:scenariosCollapsed', activeHouseholdId, true);
     }
-    // Если сценариев нет, но секция развернута (пользователь мог развернуть вручную),
-    // оставляем как есть - не принуждаем к сворачиванию
   }, [activeScenarios.length, activeHouseholdId]);
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-900 dark:text-slate-100 pb-12">
-      {/* Top Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-surface/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 dark:bg-primary/20 rounded-lg">
-              <Home className="w-5 h-5 text-purple-600 dark:text-primary" />
-            </div>
-            <div className="flex items-center gap-1">
-              <h1
-                className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100"
-                title={homeName}
-              >
-                {homeName}
-              </h1>
-              {hasMultipleHomes && (
-                <button
-                  type="button"
-                  onClick={onSwitchHousehold}
-                  className="ml-1 inline-flex items-center justify-center w-7 h-7 rounded-full border border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600 bg-transparent hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Переключить дом"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-slate-900 rounded-full border border-gray-300 dark:border-slate-700">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Онлайн</span>
-             </div>
-<button
-                 onClick={toggleEditMode}
-                 className={`p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors ${
-                   isEditMode 
-                     ? 'text-purple-600 dark:text-primary bg-purple-50 dark:bg-primary/20' 
-                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                 }`}
-                 title={isEditMode ? 'Выйти из режима редактирования' : 'Редактировать дашборд'}
-             >
-                 {isEditMode ? <Pencil className={`w-5 h-5`} /> : <Pencil className={`w-5 h-5`} />}
-            </button>
-            <button
-                 onClick={onToggleAutostart}
-                 className={`p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors ${
-                   isAutostartEnabled 
-                     ? 'text-purple-600 dark:text-primary bg-purple-50 dark:bg-primary/20' 
-                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                 }`}
-                 title={isAutostartEnabled ? 'Автозапуск включен. Нажмите, чтобы выключить' : 'Автозапуск выключен. Нажмите, чтобы включить'}
-            >
-                <Power className={`w-5 h-5`} />
-            </button>
-             <button
-                onClick={toggleTheme}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                title={theme === 'dark' ? 'Переключить на светлую тему' : 'Переключить на темную тему'}
-            >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-			 <button
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Обновить данные">
-                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={() => setShowInfoModal(true)}
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              title="О программе"
-            >
-              <Info className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setShowConfirmModal(true)}
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              title="Выйти"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
+  // Content title based on view
+  const contentTitle = useMemo(() => {
+    if (activeSidebarView === 'room' && activeRoomId) {
+      const room = roomsForHome.find(r => r.id === activeRoomId);
+      if (room) return room.name;
+    }
+    if (activeSidebarView === 'group' && activeGroupId) {
+      const group = groupsForHome.find(g => g.id === activeGroupId);
+      if (group) return group.name;
+    }
+    return homeName;
+  }, [activeSidebarView, activeRoomId, activeGroupId, roomsForHome, groupsForHome, homeName]);
+
+  const contentSubtitle = useMemo(() => {
+    if (activeSidebarView === 'room' && activeRoomId) {
+      const roomDevices = devicesForHome.filter(d => d.room === activeRoomId);
+      const onCount = roomDevices.filter(d => {
+        const onOff = d.capabilities.find(c => c.type === 'devices.capabilities.on_off');
+        return onOff?.state?.value === true;
+      }).length;
+      return `${roomDevices.length} устройств, ${onCount} включено`;
+    }
+    if (activeSidebarView === 'group' && activeGroupId) {
+      const group = groupsForHome.find(g => g.id === activeGroupId);
+      if (group) {
+        const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
+        const onCount = groupDevices.filter(d => {
+          const onOff = d.capabilities.find(c => c.type === 'devices.capabilities.on_off');
+          return onOff?.state?.value === true;
+        }).length;
+        return `${groupDevices.length} устройств, ${onCount} включено`;
+      }
+    }
+    return `${devicesForHome.length} устройств в доме`;
+  }, [activeSidebarView, activeRoomId, activeGroupId, devicesForHome, groupsForHome]);
+
+  // ---- Render helpers ----
+  const renderStatsRow = () => (
+    <div className="stats-row">
+      <div className="stat-chip">
+        <Building2 /> Домов: {households.length}
+      </div>
+      <div className="stat-chip">
+        <SquareSquare /> Комнат: {roomsForHome.length}
+      </div>
+      <div className="stat-chip">
+        <ScrollText /> Сценариев: {activeScenarios.length}
+      </div>
+      <div className="stat-chip">
+        <Lightbulb /> Устройств: {devicesForHome.length}
+      </div>
+    </div>
+  );
+
+  const renderFavoritesSection = () => {
+    if (!hasFavorites) return null;
+    return (
+      <section className="favorites-section">
+        <div className="favorites-title">
+          <Star />
+          <h2>Избранное</h2>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-12">
-        
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-lg text-orange-600 dark:text-orange-400"><Building2 className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-slate-600 dark:text-secondary">Домов</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{households.length}</p>
-                </div>
+        {visibleFavoriteScenarios.length > 0 && (
+          <>
+            <div className="section-header" style={{ marginBottom: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-2)' }}>Сценарии</span>
+              <span className="section-count">{visibleFavoriteScenarios.length}</span>
             </div>
-            <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400"><SquareSquare className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-slate-600 dark:text-secondary">Комнат</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{roomsForHome.length}</p>
-                </div>
+            <div className="scenario-grid" style={{ marginBottom: 16 }}>
+              {visibleFavoriteScenarios.map(scenario => (
+                <ScenarioCard
+                  key={scenario.id}
+                  scenario={scenario}
+                  onExecute={onExecuteScenario}
+                  isFavorite={true}
+                  onToggleFavorite={onToggleScenarioFavorite}
+                  isEditMode={isEditMode}
+                  iconHiddenState={getIconHiddenState(`scenario_${scenario.id}`)}
+                  onToggleVisibility={() => toggleCardVisibility(`scenario_${scenario.id}`)}
+                />
+              ))}
             </div>
-            <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg text-purple-600 dark:text-purple-400"><ScrollText className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-slate-600 dark:text-secondary">Сценариев</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{activeScenarios.length}</p>
-                </div>
+          </>
+        )}
+
+        {visibleFavoriteDevices.length > 0 && (
+          <>
+            <div className="section-header" style={{ marginBottom: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-2)' }}>Устройства</span>
+              <span className="section-count">{visibleFavoriteDevices.length}</span>
             </div>
-            <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/5 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400"><Lightbulb className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-slate-600 dark:text-secondary">Устройств</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{devicesForHome.length}</p>
-                </div>
+            <div className="device-grid" style={{ marginBottom: 16 }}>
+              {visibleFavoriteDevices.map(device => (
+                <DeviceCard
+                  key={device.id}
+                  device={device}
+                  onToggle={onToggleDevice}
+                  isFavorite={true}
+                  onToggleFavorite={onToggleDeviceFavorite}
+                  onOpenSettings={handleOpenDeviceSettings}
+                  onOpenCameraStream={handleOpenCameraStream}
+                  isEditMode={isEditMode}
+                  iconHiddenState={getIconHiddenState(`device_${device.id}`)}
+                  onToggleVisibility={() => toggleCardVisibility(`device_${device.id}`)}
+                />
+              ))}
             </div>
-        </div>
-		
-		{hasFavorites && ( // ВОССТАНОВИТЬ СЕКЦИЮ ИЗБРАННОГО
-			<section className="mb-8">
-				<div className="flex items-center gap-3 mb-4">
-					<Star className="w-6 h-6 text-yellow-500 dark:text-accent" />
-					<h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Избранное</h2>
-				</div>
+          </>
+        )}
 
-				{/* Избранные сценарии */}
-				{visibleFavoriteScenarios.length > 0 && (
-					<>
-						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3 flex items-center gap-2">Сценарии <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-surface px-2 py-1 rounded-full">{visibleFavoriteScenarios.length}</span></h3>
-						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-							{visibleFavoriteScenarios.map(scenario => {
-								const cardId = `scenario_${scenario.id}`;
-								return (
-									<ScenarioCard 
-										key={scenario.id} 
-										scenario={scenario} 
-										onExecute={onExecuteScenario} 
-										isFavorite={true} 
-										onToggleFavorite={onToggleScenarioFavorite}
-										isEditMode={isEditMode}
-										iconHiddenState={getIconHiddenState(cardId)}
-										onToggleVisibility={() => toggleCardVisibility(cardId)}
-									/>
-								);
-							})}
-						</div>
-					</>
-				)}
+        {visibleFavoriteGroups.length > 0 && (
+          <>
+            <div className="section-header" style={{ marginBottom: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-2)' }}>Группы</span>
+              <span className="section-count">{visibleFavoriteGroups.length}</span>
+            </div>
+            {visibleFavoriteGroups.map(group => (
+              <GroupCard
+                key={group.id}
+                group={group}
+                devices={devicesForHome}
+                onToggleGroup={onToggleGroup}
+                onToggleDevice={onToggleDevice}
+                favoriteDeviceIds={favoriteDeviceIds}
+                onToggleDeviceFavorite={onToggleDeviceFavorite}
+                isFavorite={true}
+                onToggleFavorite={onToggleGroupFavorite}
+                onOpenSettings={handleOpenDeviceSettings}
+                onOpenCameraStream={handleOpenCameraStream}
+                onOpenGroupSettings={(g) => {
+                  const gDevices = devicesForHome.filter(d => g.devices.includes(d.id));
+                  if (isLightGroup(gDevices)) handleOpenGroupLightSettings(g);
+                  else if (gDevices.length > 0 && gDevices.every(d => d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat')) handleOpenGroupThermostatSettings(g);
+                  else if (gDevices.length > 0 && gDevices.every(d => d.type === 'devices.types.ventilation.fan')) handleOpenGroupFanSettings(g);
+                }}
+                isEditMode={isEditMode}
+                getEffectiveHidden={getEffectiveHidden}
+                getIconHiddenState={getIconHiddenState}
+                onToggleDeviceVisibility={toggleCardVisibility}
+              />
+            ))}
+          </>
+        )}
+      </section>
+    );
+  };
 
-				{/* Избранные устройства */}
-				{visibleFavoriteDevices.length > 0 && (
-					<>
-						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3 flex items-center gap-2">Устройства <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-surface px-2 py-1 rounded-full">{visibleFavoriteDevices.length}</span></h3>
-						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-							{visibleFavoriteDevices.map(device => {
-								const cardId = `device_${device.id}`;
-								return (
-									<DeviceCard 
-										key={device.id} 
-										device={device} 
-										onToggle={onToggleDevice} 
-										isFavorite={true} 
-										onToggleFavorite={onToggleDeviceFavorite}
-										onOpenSettings={handleOpenDeviceSettings}
-										onOpenCameraStream={handleOpenCameraStream}
-										isEditMode={isEditMode}
-										iconHiddenState={getIconHiddenState(cardId)}
-										onToggleVisibility={() => toggleCardVisibility(cardId)}
-									/>
-								);
-							})}
-						</div>
-					</>
-				)}
+  const renderHomeView = () => (
+    <>
+      {renderStatsRow()}
+      {renderFavoritesSection()}
 
-				{/* Избранные группы */}
-				{visibleFavoriteGroups.length > 0 && (
-					<>
-						<h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-6 mb-3 flex items-center gap-2">Группы <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-surface px-2 py-1 rounded-full">{visibleFavoriteGroups.length}</span></h3>
-						<div className="space-y-4">
-							{visibleFavoriteGroups.map(group => (
-								<GroupCard
-									key={group.id}
-									group={group}
-									devices={devicesForHome}
-									onToggleGroup={onToggleGroup}
-									onToggleDevice={onToggleDevice}
-									favoriteDeviceIds={favoriteDeviceIds}
-									onToggleDeviceFavorite={onToggleDeviceFavorite}
-									isFavorite={true}
-									onToggleFavorite={onToggleGroupFavorite}
-									onOpenSettings={handleOpenDeviceSettings}
-									onOpenCameraStream={handleOpenCameraStream}
-									onOpenGroupSettings={(group) => {
-										const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
-										const isLightGroupCheck = isLightGroup(groupDevices);
-										const isThermostatGroup = groupDevices.length > 0 && groupDevices.every(d => 
-											d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat'
-										);
-										const isFanGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.ventilation.fan');
-										
-										if (isLightGroupCheck) {
-											handleOpenGroupLightSettings(group);
-										} else if (isThermostatGroup) {
-											handleOpenGroupThermostatSettings(group);
-										} else if (isFanGroup) {
-											handleOpenFanGroupSettings(group);
-										}
-									}}
-									isEditMode={isEditMode}
-									getEffectiveHidden={getEffectiveHidden}
-									getIconHiddenState={getIconHiddenState}
-									onToggleDeviceVisibility={toggleCardVisibility}
-								/>
-							))}
-						</div>
-					</>
-				)}
-			</section>
-		)}
+      {roomsForHome.map(room => {
+        const roomDevices = devicesForHome.filter(d => room.devices.includes(d.id));
+        if (roomDevices.length === 0) return null;
+        const isRoomCollapsed = collapsedRooms.has(room.id);
 
+        // Separate standalone devices and devices that belong to groups
+        const groupedDeviceIds = new Set(
+          groupsForHome
+            .filter(g => g.devices.some(deviceId => roomDevices.some(d => d.id === deviceId)))
+            .flatMap(g => g.devices)
+        );
+        const standaloneDevices = roomDevices.filter(d => !groupedDeviceIds.has(d.id));
+        const roomGroups = groupsForHome.filter(g => g.devices.some(deviceId => roomDevices.some(d => d.id === deviceId)));
 
-        {/* Scenarios Section */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={toggleScenarios}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            >
-              {isScenariosCollapsed ? (
-                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              )}
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Сценарии</h2>
-            </button>
-            <span className="text-sm text-slate-600 dark:text-secondary bg-white dark:bg-surface px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">
-              {activeScenarios.filter(s => !getEffectiveHidden(`scenario_${s.id}`)).length} активных
-            </span>
+        return (
+          <div key={room.id} className="room-section">
+            <div className="room-header" onClick={() => toggleRoom(room.id)}>
+              {isRoomCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+              <h2>{room.name}</h2>
+              <span className="room-count">{roomDevices.length}</span>
+            </div>
+            {!isRoomCollapsed && (
+              <>
+                {standaloneDevices.length > 0 && (
+                  <div className="device-grid" style={{ marginBottom: 16 }}>
+                    {standaloneDevices
+                      .filter(d => !getEffectiveHidden(`device_${d.id}`))
+                      .map(dev => (
+                        <DeviceCard
+                          key={dev.id}
+                          device={dev}
+                          onToggle={onToggleDevice}
+                          isFavorite={favoriteDeviceIds.includes(dev.id)}
+                          onToggleFavorite={onToggleDeviceFavorite}
+                          onOpenSettings={handleOpenDeviceSettings}
+                          onOpenCameraStream={handleOpenCameraStream}
+                          isEditMode={isEditMode}
+                          iconHiddenState={getIconHiddenState(`device_${dev.id}`)}
+                          onToggleVisibility={() => toggleCardVisibility(`device_${dev.id}`)}
+                        />
+                      ))}
+                  </div>
+                )}
+
+                {roomGroups.map(group => (
+                  <GroupCard
+                    key={group.id}
+                    group={group}
+                    devices={devicesForHome}
+                    onToggleGroup={onToggleGroup}
+                    onToggleDevice={onToggleDevice}
+                    favoriteDeviceIds={favoriteDeviceIds}
+                    onToggleDeviceFavorite={onToggleDeviceFavorite}
+                    isFavorite={favoriteGroupIds.includes(group.id)}
+                    onToggleFavorite={onToggleGroupFavorite}
+                    onOpenSettings={handleOpenDeviceSettings}
+                    onOpenCameraStream={handleOpenCameraStream}
+                    onOpenGroupSettings={(g) => {
+                      const gDevices = devicesForHome.filter(d => g.devices.includes(d.id));
+                      if (isLightGroup(gDevices)) handleOpenGroupLightSettings(g);
+                      else if (gDevices.length > 0 && gDevices.every(d => d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat')) handleOpenGroupThermostatSettings(g);
+                      else if (gDevices.length > 0 && gDevices.every(d => d.type === 'devices.types.ventilation.fan')) handleOpenGroupFanSettings(g);
+                    }}
+                    isEditMode={isEditMode}
+                    getEffectiveHidden={getEffectiveHidden}
+                    getIconHiddenState={getIconHiddenState}
+                    onToggleDeviceVisibility={toggleCardVisibility}
+                  />
+                ))}
+              </>
+            )}
           </div>
+        );
+      })}
 
+      {/* Unassigned Devices */}
+      {(() => {
+        const assignedIds = new Set(roomsForHome.flatMap(r => r.devices));
+        const unassignedDevices = devicesForHome.filter(d => !assignedIds.has(d.id));
+        if (unassignedDevices.length === 0) return null;
+        return (
+          <div className="room-section">
+            <div className="room-header" onClick={toggleUnassignedDevices}>
+              {isUnassignedDevicesCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+              <h2>Без комнаты</h2>
+              <span className="room-count">{unassignedDevices.length}</span>
+            </div>
+            {!isUnassignedDevicesCollapsed && (
+              <div className="device-grid">
+                {unassignedDevices
+                  .filter(d => !getEffectiveHidden(`device_${d.id}`))
+                  .map(dev => (
+                    <DeviceCard
+                      key={dev.id}
+                      device={dev}
+                      onToggle={onToggleDevice}
+                      isFavorite={favoriteDeviceIds.includes(dev.id)}
+                      onToggleFavorite={onToggleDeviceFavorite}
+                      onOpenSettings={handleOpenDeviceSettings}
+                      onOpenCameraStream={handleOpenCameraStream}
+                      isEditMode={isEditMode}
+                      iconHiddenState={getIconHiddenState(`device_${dev.id}`)}
+                      onToggleVisibility={() => toggleCardVisibility(`device_${dev.id}`)}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Scenarios Section */}
+      {activeScenarios.length > 0 && (
+        <section style={{ marginTop: 32 }}>
+          <div className="section-header">
+            <button onClick={toggleScenarios} style={{ display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+              {isScenariosCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+              <h2>Сценарии</h2>
+            </button>
+            <span className="section-count">{activeScenarios.filter(s => !getEffectiveHidden(`scenario_${s.id}`)).length} активных</span>
+          </div>
           {!isScenariosCollapsed && (
             <>
               {activeScenarios.length === 0 ? (
-                 <div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl bg-gray-50 dark:bg-surface/30">
-                    <p className="text-slate-600 dark:text-slate-400">У вас нет активных сценариев.</p>
-                 </div>
+                <div className="empty-state"><p>У вас нет активных сценариев.</p></div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {activeScenarios.map((scenario: YandexScenario) => {
+                <div className="scenario-grid">
+                  {activeScenarios.map(scenario => {
                     const cardId = `scenario_${scenario.id}`;
                     const isHidden = getEffectiveHidden(cardId);
                     if (!isEditMode && isHidden) return null;
                     return (
-                      <ScenarioCard 
-                        key={scenario.id} 
-                        scenario={scenario} 
-                        onExecute={onExecuteScenario} 
+                      <ScenarioCard
+                        key={scenario.id}
+                        scenario={scenario}
+                        onExecute={onExecuteScenario}
                         isFavorite={favoriteScenarioIds.includes(scenario.id)}
                         onToggleFavorite={onToggleScenarioFavorite}
                         isEditMode={isEditMode}
@@ -935,269 +800,195 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </>
           )}
         </section>
+      )}
+    </>
+  );
 
-        {/* Groups Section */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={toggleGroups}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            >
-              {isGroupsCollapsed ? (
-                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              )}
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Группы</h2>
-            </button>
-            <span className="text-sm text-slate-600 dark:text-secondary bg-white dark:bg-surface px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">
-              {groupsForHome.length} групп
-            </span>
+  const renderRoomView = () => {
+    if (!activeRoomId) return null;
+    const room = roomsForHome.find(r => r.id === activeRoomId);
+    if (!room) return <div className="empty-state"><p>Комната не найдена</p></div>;
+
+    const roomDevices = devicesForHome.filter(d => room.devices.includes(d.id));
+    if (roomDevices.length === 0) return <div className="empty-state"><p>В этой комнате нет устройств</p></div>;
+
+    const groupedDeviceIds = new Set(
+      groupsForHome
+        .filter(g => g.devices.some(deviceId => roomDevices.some(d => d.id === deviceId)))
+        .flatMap(g => g.devices)
+    );
+    const standaloneDevices = roomDevices.filter(d => !groupedDeviceIds.has(d.id));
+    const roomGroups = groupsForHome.filter(g => g.devices.some(deviceId => roomDevices.some(d => d.id === deviceId)));
+
+    return (
+      <>
+        {standaloneDevices.length > 0 && (
+          <div className="device-grid" style={{ marginBottom: 16 }}>
+            {standaloneDevices
+              .filter(d => !getEffectiveHidden(`device_${d.id}`))
+              .map(dev => (
+                <DeviceCard
+                  key={dev.id}
+                  device={dev}
+                  onToggle={onToggleDevice}
+                  isFavorite={favoriteDeviceIds.includes(dev.id)}
+                  onToggleFavorite={onToggleDeviceFavorite}
+                  onOpenSettings={handleOpenDeviceSettings}
+                  onOpenCameraStream={handleOpenCameraStream}
+                  isEditMode={isEditMode}
+                  iconHiddenState={getIconHiddenState(`device_${dev.id}`)}
+                  onToggleVisibility={() => toggleCardVisibility(`device_${dev.id}`)}
+                />
+              ))}
           </div>
+        )}
 
-          {!isGroupsCollapsed && (
-            <>
-              {groupsForHome.length === 0 ? (
-                 <div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl bg-gray-50 dark:bg-surface/30">
-                    <p className="text-slate-600 dark:text-slate-400">У вас нет групп устройств.</p>
-                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {groupsForHome.map(group => (
-                    <GroupCard
-                      key={group.id}
-                      group={group}
-                      devices={devicesForHome}
-                      onToggleGroup={onToggleGroup}
-                      onToggleDevice={onToggleDevice}
-                      favoriteDeviceIds={favoriteDeviceIds}
-                      onToggleDeviceFavorite={onToggleDeviceFavorite}
-                      isFavorite={favoriteGroupIds.includes(group.id)}
-                      onToggleFavorite={onToggleGroupFavorite}
-                      onOpenSettings={handleOpenDeviceSettings}
-                      onOpenCameraStream={handleOpenCameraStream}
-                      onOpenGroupSettings={(group) => {
-                        const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
-                        const isLightGroupCheck = isLightGroup(groupDevices);
-                        const isThermostatGroup = groupDevices.length > 0 && groupDevices.every(d => 
-                          d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat'
-                        );
-                        const isFanGroup = groupDevices.length > 0 && groupDevices.every(d => d.type === 'devices.types.ventilation.fan');
-                        
-                        if (isLightGroupCheck) {
-                          handleOpenGroupLightSettings(group);
-                        } else if (isThermostatGroup) {
-                          handleOpenGroupThermostatSettings(group);
-                        } else if (isFanGroup) {
-                          handleOpenFanGroupSettings(group);
-                        }
-                      }}
-                      isEditMode={isEditMode}
-                      getEffectiveHidden={getEffectiveHidden}
-                      getIconHiddenState={getIconHiddenState}
-                      onToggleDeviceVisibility={toggleCardVisibility}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </section>
+        {roomGroups.map(group => (
+          <GroupCard
+            key={group.id}
+            group={group}
+            devices={devicesForHome}
+            onToggleGroup={onToggleGroup}
+            onToggleDevice={onToggleDevice}
+            favoriteDeviceIds={favoriteDeviceIds}
+            onToggleDeviceFavorite={onToggleDeviceFavorite}
+            isFavorite={favoriteGroupIds.includes(group.id)}
+            onToggleFavorite={onToggleGroupFavorite}
+            onOpenSettings={handleOpenDeviceSettings}
+            onOpenCameraStream={handleOpenCameraStream}
+            onOpenGroupSettings={(g) => {
+              const gDevices = devicesForHome.filter(d => g.devices.includes(d.id));
+              if (isLightGroup(gDevices)) handleOpenGroupLightSettings(g);
+              else if (gDevices.length > 0 && gDevices.every(d => d.type === 'devices.types.thermostat.ac' || d.type === 'devices.types.thermostat')) handleOpenGroupThermostatSettings(g);
+              else if (gDevices.length > 0 && gDevices.every(d => d.type === 'devices.types.ventilation.fan')) handleOpenGroupFanSettings(g);
+            }}
+            isEditMode={isEditMode}
+            getEffectiveHidden={getEffectiveHidden}
+            getIconHiddenState={getIconHiddenState}
+            onToggleDeviceVisibility={toggleCardVisibility}
+          />
+        ))}
+      </>
+    );
+  };
 
-        {/* Devices Section */}
-        <section>
-            <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={toggleDevices}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              >
-                {isDevicesCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                )}
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Устройства</h2>
-              </button>
-              <span className="text-sm text-slate-600 dark:text-secondary bg-white dark:bg-surface px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">
-              {devicesForHome.filter(d => !getEffectiveHidden(`device_${d.id}`)).length} устройств
-              </span>
+  const renderGroupView = () => {
+    if (!activeGroupId) return null;
+    const group = groupsForHome.find(g => g.id === activeGroupId);
+    if (!group) return <div className="empty-state"><p>Группа не найдена</p></div>;
+
+    const groupDevices = devicesForHome.filter(d => group.devices.includes(d.id));
+    if (groupDevices.length === 0) return <div className="empty-state"><p>В этой группе нет устройств</p></div>;
+
+    return (
+      <div className="device-grid">
+        {groupDevices
+          .filter(d => !getEffectiveHidden(`device_${d.id}`))
+          .map(dev => (
+            <DeviceCard
+              key={dev.id}
+              device={dev}
+              onToggle={onToggleDevice}
+              isFavorite={favoriteDeviceIds.includes(dev.id)}
+              onToggleFavorite={onToggleDeviceFavorite}
+              onOpenSettings={handleOpenDeviceSettings}
+              onOpenCameraStream={handleOpenCameraStream}
+              isEditMode={isEditMode}
+              iconHiddenState={getIconHiddenState(`device_${dev.id}`)}
+              onToggleVisibility={() => toggleCardVisibility(`device_${dev.id}`)}
+            />
+          ))}
+      </div>
+    );
+  };
+
+  const renderContent = () => {
+    switch (activeSidebarView) {
+      case 'home':
+        return renderHomeView();
+      case 'room':
+        return renderRoomView();
+      case 'group':
+        return renderGroupView();
+      default:
+        return renderHomeView();
+    }
+  };
+
+  return (
+    <div className="window">
+      <Toolbar
+        isEditMode={isEditMode}
+        toggleEditMode={toggleEditMode}
+        isAutostartEnabled={isAutostartEnabled}
+        onToggleAutostart={onToggleAutostart}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+        onOpenInfo={() => setShowInfoModal(true)}
+        onLogout={() => setShowConfirmModal(true)}
+      />
+      <div className="body">
+        <Sidebar
+          households={households}
+          activeHouseholdId={activeHouseholdId}
+          onSwitchHousehold={onSwitchHousehold}
+          roomsForHome={roomsForHome}
+          groupsForHome={groupsForHome}
+          activeScenarios={activeScenarios}
+          allScenarios={data.scenarios.filter(s => s.is_active)}
+          devicesForHome={devicesForHome}
+          favoriteDeviceIds={favoriteDeviceIds}
+          favoriteScenarioIds={favoriteScenarioIds}
+          favoriteGroupIds={favoriteGroupIds}
+          onToggleDeviceFavorite={onToggleDeviceFavorite}
+          onToggleScenarioFavorite={onToggleScenarioFavorite}
+          onToggleGroupFavorite={onToggleGroupFavorite}
+          onExecuteScenario={onExecuteScenario}
+          onToggleDevice={onToggleDevice}
+          onToggleGroup={onToggleGroup}
+          activeSidebarView={activeSidebarView}
+          activeRoomId={activeRoomId}
+          activeGroupId={activeGroupId}
+          onSelectHome={onSelectHome}
+          onSelectRoom={onSelectRoom}
+          onSelectGroup={onSelectGroup}
+        />
+        <main className="content">
+          <div className="content-header">
+            <div>
+              <h1>{contentTitle}</h1>
+              <div className="subtitle">{contentSubtitle}</div>
             </div>
-            
-            {!isDevicesCollapsed && (
-              <>
-{roomsForHome.length === 0 && devicesForHome.length > 0 && (
-                     (() => {
-                       const visibleDevices = devicesForHome.filter(d => !getEffectiveHidden(`device_${d.id}`));
-                       return visibleDevices.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {visibleDevices.map(device => {
-                              const cardId = `device_${device.id}`;
-                              return (
-                                <DeviceCard 
-                                key={device.id} 
-                                device={device} 
-                                onToggle={onToggleDevice} 
-                                isFavorite={favoriteDeviceIds.includes(device.id)} 
-                                onToggleFavorite={onToggleDeviceFavorite}
-                                onOpenSettings={handleOpenDeviceSettings}
-                                onOpenCameraStream={handleOpenCameraStream}
-                                 isEditMode={isEditMode}
-                                 iconHiddenState={getIconHiddenState(cardId)}
-                                 onToggleVisibility={() => toggleCardVisibility(cardId)}
-                                />
-                               );
-                             })}
-                         </div>
-                        ) : null;
-                      })()
-                    )}
-
-                <div className="space-y-8">
-                    {roomsForHome.map(room => {
-                        const roomDevices = devicesForHome.filter(d => room.devices.includes(d.id));
-                        if (roomDevices.length === 0) return null;
-                        const isRoomCollapsed = collapsedRooms.has(room.id);
-                        
-                        return (
-                            <div key={room.id} className="bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
-                                <button
-                                  onClick={() => toggleRoom(room.id)}
-                                  className="w-full flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
-                                >
-                                  {isRoomCollapsed ? (
-                                    <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                                  ) : (
-                                    <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                                  )}
-                                  <h3 className="font-semibold text-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-primary"></span>
-                                      {room.name}
-                                  </h3>
-                                </button>
-                                {!isRoomCollapsed && (
-<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                       {roomDevices
-                                         .filter(dev => !getEffectiveHidden(`device_${dev.id}`))
-                                         .map(dev => {
-                                           const cardId = `device_${dev.id}`;
-                                           return (
-                                             <DeviceCard 
-                                             key={dev.id} 
-                                             device={dev} 
-                                             onToggle={onToggleDevice} 
-                                             isFavorite={favoriteDeviceIds.includes(dev.id)} 
-                                             onToggleFavorite={onToggleDeviceFavorite}
-                                             onOpenSettings={handleOpenDeviceSettings}
-                                             onOpenCameraStream={handleOpenCameraStream}
-                                             isEditMode={isEditMode}
-                                             iconHiddenState={getIconHiddenState(cardId)}
-                                             onToggleVisibility={() => toggleCardVisibility(cardId)}
-                                             />
-                                           );
-                                         })}
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
-                
-                {/* Unassigned Devices */}
-                 {(() => {
-                     const assignedIds = new Set(roomsForHome.flatMap(r => r.devices));
-                     const unassignedDevices = devicesForHome.filter(d => !assignedIds.has(d.id));
-                     if (unassignedDevices.length === 0) return null;
-
-                     return (
-                         <div className="mt-8 bg-gray-100 dark:bg-surface/30 border border-gray-200 dark:border-white/5 rounded-2xl p-6">
-                            <button
-                              onClick={toggleUnassignedDevices}
-                              className="w-full flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
-                            >
-                              {isUnassignedDevicesCollapsed ? (
-                                <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                              )}
-                              <h3 className="font-semibold text-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-primary"></span>
-                                  Без комнаты
-                              </h3>
-                            </button>
-                            {!isUnassignedDevicesCollapsed && (
-                              (() => {
-                                const visibleUnassignedDevices = unassignedDevices.filter(dev => !getEffectiveHidden(`device_${dev.id}`));
-                                return visibleUnassignedDevices.length > 0 ? (
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    {visibleUnassignedDevices.map(dev => {
-                                      const cardId = `device_${dev.id}`;
-return (
-                                        <DeviceCard 
-                                        key={dev.id} 
-                                        device={dev} 
-                                        onToggle={onToggleDevice} 
-                                        isFavorite={favoriteDeviceIds.includes(dev.id)} 
-                                        onToggleFavorite={onToggleDeviceFavorite}
-                                        onOpenSettings={handleOpenDeviceSettings}
-                                        onOpenCameraStream={handleOpenCameraStream}
-                                        isEditMode={isEditMode}
-                                        iconHiddenState={getIconHiddenState(cardId)}
-                                        onToggleVisibility={() => toggleCardVisibility(cardId)}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                ) : null;
-                              })()
-                            )}
-                         </div>
-                      );
-                  })()}
-               </>
-             )}
-         </section>
-
-      </main>
-	  
-      {showConfirmModal && (
-          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
-              <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-300">
-                  <div className="flex items-start justify-between mb-4">
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Подтверждение выхода</h3>
-                      <button onClick={() => setShowConfirmModal(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                          <X className="w-5 h-5" />
-                      </button>
-                  </div>
-
-                  <p className="text-slate-700 dark:text-slate-300 mb-6 text-sm">
-                      Вы уверены, что хотите выйти из учетной записи? После этого действия для последующего входа потребуется токен.
-                  </p>
-
-                  <div className="flex justify-end gap-3">
-                      {/* Кнопка "Нет" (выделена красной обводкой) */}
-                      <button
-                          onClick={() => setShowConfirmModal(false)}
-                          className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                      >
-                          Нет
-                      </button>
-
-                      {/* Кнопка "Да, уверен" */}
-                      <button
-                          onClick={() => {
-                              onLogout(); // Вызов функции выхода из App.tsx
-                              setShowConfirmModal(false); // Закрываем модальное окно
-                          }}
-                          className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-600 dark:bg-primary hover:bg-purple-700 dark:hover:bg-blue-600 text-white"
-                      >
-                          Да, уверен
-                      </button>
-                  </div>
-              </div>
           </div>
+
+          {renderContent()}
+        </main>
+      </div>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
+          <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Подтверждение выхода</h3>
+              <button onClick={() => setShowConfirmModal(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-slate-700 dark:text-slate-300 mb-6 text-sm">
+              Вы уверены, что хотите выйти из учетной записи? После этого действия для последующего входа потребуется токен.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowConfirmModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
+                Нет
+              </button>
+              <button onClick={() => { onLogout(); setShowConfirmModal(false); }} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary hover:bg-blue-600 text-white">
+                Да, уверен
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Thermostat Settings Modal */}
       {selectedThermostatDevice && (
         <ThermostatSettingsModal
           device={selectedThermostatDevice}
@@ -1207,7 +998,6 @@ return (
         />
       )}
 
-      {/* Light Brightness Settings Modal */}
       {selectedLightDevice && (
         <BrightnessSettingsModal
           device={selectedLightDevice}
@@ -1217,7 +1007,6 @@ return (
         />
       )}
 
-      {/* Light Brightness Settings Modal for Group */}
       {selectedLightGroup && (
         <GroupLightSettingsModal
           group={selectedLightGroup}
@@ -1228,7 +1017,6 @@ return (
         />
       )}
 
-      {/* Thermostat Settings Modal for Group */}
       {selectedThermostatGroup && (
         <GroupThermostatSettingsModal
           group={selectedThermostatGroup}
@@ -1239,7 +1027,6 @@ return (
         />
       )}
 
-      {/* Fan Settings Modal */}
       {selectedFanDevice && (
         <FanSettingsModal
           device={selectedFanDevice}
@@ -1249,7 +1036,6 @@ return (
         />
       )}
 
-      {/* Fan Settings Modal for Group */}
       {selectedFanGroup && (
         <GroupFanSettingsModal
           group={selectedFanGroup}
@@ -1271,13 +1057,11 @@ return (
         />
       )}
 
-      {/* Info Modal */}
       <InfoModal
         isOpen={showInfoModal}
         onClose={() => setShowInfoModal(false)}
         currentVersion={packageJson.version}
       />
-	  
     </div>
   );
 };
