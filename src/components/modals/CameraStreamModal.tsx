@@ -404,7 +404,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
       <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-full bg-purple-50 dark:bg-primary/20 text-purple-600 dark:text-primary">
+            <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20 text-[#176f91] dark:text-primary">
               <Video className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -448,7 +448,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
                 disabled={isLoading || !streamProtocol}
                 className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
                   isPictureInPicture
-                    ? 'text-purple-600 dark:text-primary bg-purple-50 dark:bg-primary/20'
+                    ? 'text-[#176f91] dark:text-primary bg-[#176f91]/10 dark:bg-primary/20'
                     : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
                 title={isPictureInPicture ? 'Закрыть окно поверх других' : 'Окно поверх других приложений'}
@@ -522,7 +522,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
                       onClick={() => handleQualityChange(preset)}
                       className={`w-full px-3 py-2 text-xs text-left transition-colors ${
                         selectedQuality.label === preset.label
-                          ? 'bg-purple-600 text-white font-semibold'
+                          ? 'bg-[#176f91] text-white font-semibold'
                           : 'text-white/80 hover:bg-white/10'
                       }`}
                     >
@@ -564,7 +564,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
                 )}
                 <button
                   onClick={loadStream}
-                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium"
+                  className="px-4 py-2 rounded-lg bg-[#176f91] hover:bg-[#145a72] text-sm font-medium"
                 >
                   Повторить
                 </button>

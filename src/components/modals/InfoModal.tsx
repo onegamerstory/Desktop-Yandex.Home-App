@@ -101,7 +101,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, currentVe
 
             {isLoading && (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 dark:border-primary"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#176f91] dark:border-primary"></div>
               </div>
             )}
 
@@ -135,7 +135,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, currentVe
             {!isLoading && !latestVersion && !error && (
               <button
                 onClick={checkForUpdates}
-                className="w-full px-4 py-2 bg-purple-600 dark:bg-primary hover:bg-purple-700 dark:hover:bg-primary/90 text-white rounded-lg transition-colors font-medium text-sm"
+                className="w-full px-4 py-2 bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary/90 text-white rounded-lg transition-colors font-medium text-sm"
               >
                 Проверить обновление
               </button>
@@ -150,7 +150,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, currentVe
               href={downloadUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-primary hover:bg-purple-700 dark:hover:bg-primary/90 text-white rounded-lg transition-colors font-medium text-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary/90 text-white rounded-lg transition-colors font-medium text-sm"
             >
               <Download className="w-4 h-4" />
               Скачать

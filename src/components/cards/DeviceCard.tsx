@@ -125,8 +125,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
           {isEditMode && onToggleVisibility && (
             <div
               onClick={(e) => { e.stopPropagation(); onToggleVisibility(`device_${device.id}`); }}
-              style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--muted)' }}
-              title={iconHiddenState ? 'Показать' : 'Скрыть'}
+              style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              className="edit-vis-btn"
             >
               {iconHiddenState ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </div>
@@ -134,7 +134,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
           {(isThermostat || isLight || isFan) && onOpenSettings && (
             <div
               onClick={(e) => { e.stopPropagation(); onOpenSettings(device); }}
-              style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--muted)', opacity: 1, transition: 'opacity 150ms' }}
+              style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               className="settings-btn"
               title={isThermostat ? 'Настройки климата' : isFan ? 'Настройки вентилятора' : 'Настройки яркости'}
             >
@@ -159,22 +159,15 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
               {temperatureValue !== null && humidityValue !== null ? ' · ' : ''}
               {humidityValue !== null && `${humidityValue}${humidityUnit}`}
             </>
-          ) : isCamera ? 'Нажмите для просмотра' : isSensor && formattedSensorValue ? formattedSensorValue : isOn ? 'Включено' : 'Отключено'
+          ) : isCamera ? 'Нажмите для просмотра' : isOn ? 'Включено' : 'Отключено'
         )}
       </div>
 
-      <div className="device-controls">
-        {isToggleable && (
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!loading) handleClick(); }}
-            className={`ios-toggle ${isOn ? 'is-on' : ''}`}
-            disabled={loading}
-          />
-        )}
-        {isSensor && formattedSensorValue && (
+      {isSensor && formattedSensorValue && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 'auto' }}>
           <span className="device-sensor-value">{formattedSensorValue}</span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { YandexUserInfoResponse, YandexScenario, YandexHousehold, YandexDevice, YandexGroup, YandexModeAction, CameraStreamResult } from '../types/index';
 import { Sidebar } from './Sidebar';
-import { Toolbar } from './Toolbar';
 import { ScenarioCard } from './cards/ScenarioCard';
 import { DeviceCard } from './cards/DeviceCard';
 import { GroupCard } from './cards/GroupCard';
@@ -13,7 +12,8 @@ import { FanSettingsModal } from './modals/FanSettingsModal';
 import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
 import { CameraStreamModal } from './modals/CameraStreamModal';
 import { InfoModal } from './modals/InfoModal';
-import { SquareSquare, Lightbulb, X, Star, ChevronRight, ChevronDown, Building2, ScrollText } from 'lucide-react';
+import { SquareSquare, Lightbulb, X, Star, ChevronRight, ChevronDown, Building2, ScrollText, Pencil, Power, Sun, Moon, RefreshCw, Info, LogOut } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 import { isLightDevice, isLightGroup, isCameraDevice } from '../constants';
 import packageJson from '../../package.json';
 
@@ -87,6 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedThermostatGroup, setSelectedThermostatGroup] = useState<YandexGroup | null>(null);
   const [selectedFanGroup, setSelectedFanGroup] = useState<YandexGroup | null>(null);
   const [selectedCameraDevice, setSelectedCameraDevice] = useState<YandexDevice | null>(null);
+  const { theme, toggleTheme } = useTheme();
 
   const getStorageKey = (baseKey: string, householdId: string | null): string => {
     if (!householdId) return baseKey;
@@ -140,6 +141,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
 
   const [isEditMode, setIsEditMode] = useState(false);
+
+  useEffect(() => {
+    if (activeSidebarView !== 'home') {
+      setIsEditMode(false);
+    }
+  }, [activeSidebarView]);
   
   const [hiddenCardIds, setHiddenCardIds] = useState<Set<string>>(() => {
     try {
@@ -564,8 +571,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {visibleFavoriteScenarios.length > 0 && (
           <>
             <div className="section-header" style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-2)' }}>Сценарии</span>
-              <span className="section-count">{visibleFavoriteScenarios.length}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Сценарии</span>
+                <span className="section-count">{visibleFavoriteScenarios.length}</span>
+              </div>
             </div>
             <div className="scenario-grid" style={{ marginBottom: 16 }}>
               {visibleFavoriteScenarios.map(scenario => (
@@ -587,8 +596,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {visibleFavoriteDevices.length > 0 && (
           <>
             <div className="section-header" style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-2)' }}>Устройства</span>
-              <span className="section-count">{visibleFavoriteDevices.length}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Устройства</span>
+                <span className="section-count">{visibleFavoriteDevices.length}</span>
+              </div>
             </div>
             <div className="device-grid" style={{ marginBottom: 16 }}>
               {visibleFavoriteDevices.map(device => (
@@ -612,8 +623,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {visibleFavoriteGroups.length > 0 && (
           <>
             <div className="section-header" style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-2)' }}>Группы</span>
-              <span className="section-count">{visibleFavoriteGroups.length}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Группы</span>
+                <span className="section-count">{visibleFavoriteGroups.length}</span>
+              </div>
             </div>
             {visibleFavoriteGroups.map(group => (
               <GroupCard
@@ -668,7 +681,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div key={room.id} className="room-section">
             <div className="room-header" onClick={() => toggleRoom(room.id)}>
-              {isRoomCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+              {isRoomCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} />}
               <h2>{room.name}</h2>
               <span className="room-count">{roomDevices.length}</span>
             </div>
@@ -734,7 +747,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="room-section">
             <div className="room-header" onClick={toggleUnassignedDevices}>
-              {isUnassignedDevicesCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+              {isUnassignedDevicesCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} />}
               <h2>Без комнаты</h2>
               <span className="room-count">{unassignedDevices.length}</span>
             </div>
@@ -767,10 +780,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <section style={{ marginTop: 32 }}>
           <div className="section-header">
             <button onClick={toggleScenarios} style={{ display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
-              {isScenariosCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--muted)' }} />}
+              {isScenariosCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} />}
               <h2>Сценарии</h2>
+              <span className="section-count">{activeScenarios.filter(s => !getEffectiveHidden(`scenario_${s.id}`)).length}</span>
             </button>
-            <span className="section-count">{activeScenarios.filter(s => !getEffectiveHidden(`scenario_${s.id}`)).length} активных</span>
           </div>
           {!isScenariosCollapsed && (
             <>
@@ -917,16 +930,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="window">
-      <Toolbar
-        isEditMode={isEditMode}
-        toggleEditMode={toggleEditMode}
-        isAutostartEnabled={isAutostartEnabled}
-        onToggleAutostart={onToggleAutostart}
-        onRefresh={onRefresh}
-        isRefreshing={isRefreshing}
-        onOpenInfo={() => setShowInfoModal(true)}
-        onLogout={() => setShowConfirmModal(true)}
-      />
       <div className="body">
         <Sidebar
           households={households}
@@ -935,7 +938,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           roomsForHome={roomsForHome}
           groupsForHome={groupsForHome}
           activeScenarios={activeScenarios}
-          allScenarios={data.scenarios.filter(s => s.is_active)}
           devicesForHome={devicesForHome}
           favoriteDeviceIds={favoriteDeviceIds}
           favoriteScenarioIds={favoriteScenarioIds}
@@ -959,8 +961,54 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <h1>{contentTitle}</h1>
               <div className="subtitle">{contentSubtitle}</div>
             </div>
+            {activeSidebarView === 'home' && (
+              <div className="content-actions">
+                <button
+                  onClick={toggleEditMode}
+                  className={`header-btn ${isEditMode ? 'active' : ''}`}
+                  title={isEditMode ? 'Выйти из режима редактирования' : 'Редактировать дашборд'}
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={onToggleAutostart}
+                  className={`header-btn ${isAutostartEnabled ? 'active' : ''}`}
+                  title={isAutostartEnabled ? 'Автозапуск включен' : 'Автозапуск выключен'}
+                >
+                  <Power className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="header-btn"
+                  title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+                >
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={onRefresh}
+                  disabled={isRefreshing}
+                  className="header-btn"
+                  title="Обновить"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  onClick={() => setShowInfoModal(true)}
+                  className="header-btn"
+                  title="О программе"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowConfirmModal(true)}
+                  className="header-btn"
+                  title="Выйти"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
-
           {renderContent()}
         </main>
       </div>
@@ -981,7 +1029,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <button onClick={() => setShowConfirmModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
                 Нет
               </button>
-              <button onClick={() => { onLogout(); setShowConfirmModal(false); }} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary hover:bg-blue-600 text-white">
+              <button onClick={() => { onLogout(); setShowConfirmModal(false); }} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary hover:bg-[#145a72] text-white">
                 Да, уверен
               </button>
             </div>

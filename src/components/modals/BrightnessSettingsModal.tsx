@@ -258,8 +258,8 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
                 <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">({brightness}%)</span>
               </label>
               <div className="flex items-center gap-4">
-                <div className="p-2 rounded-full bg-purple-50 dark:bg-primary/20">
-                  <Lightbulb className="w-5 h-5 text-purple-600 dark:text-primary" />
+                <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20">
+                  <Lightbulb className="w-5 h-5 text-[#176f91] dark:text-primary" />
                 </div>
                 <input
                   type="range"
@@ -268,7 +268,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
                   step={brightnessRange.precision}
                   value={brightness ?? brightnessRange.min}
                   onChange={e => setBrightness(Number(e.target.value))}
-                  className="flex-1 accent-purple-600 dark:accent-primary"
+                  className="flex-1 accent-[#176f91] dark:accent-primary"
                 />
               </div>
               <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
@@ -285,7 +285,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
               disabled={!hsvCapability && !rgbCapability}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'color'
-                  ? 'bg-purple-600 dark:bg-primary text-white'
+                  ? 'bg-[#176f91] dark:bg-primary text-white'
                   : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
@@ -297,7 +297,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
               disabled={!temperatureCapability}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'temperature'
-                  ? 'bg-purple-600 dark:bg-primary text-white'
+                  ? 'bg-[#176f91] dark:bg-primary text-white'
                   : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
@@ -321,7 +321,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
                       className={`
                         relative w-12 h-12 rounded-lg transition-all duration-200 shadow-md
                         ${selectedColor?.name === color.name
-                          ? 'ring-2 ring-purple-600 dark:ring-primary scale-105 shadow-md'
+                          ? 'ring-2 ring-[#176f91] dark:ring-primary scale-105 shadow-md'
                           : 'hover:scale-105 hover:shadow-md'
                         }
                       `}
@@ -379,14 +379,14 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
           <button
             onClick={handleApply}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-purple-400 dark:border-primary text-purple-600 dark:text-primary hover:bg-purple-50 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-primary text-[#176f91] dark:text-primary hover:bg-[#176f91]/10 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Применить'}
           </button>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-600 dark:bg-primary hover:bg-purple-700 dark:hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-[#145a72] text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Закрыть'}
           </button>

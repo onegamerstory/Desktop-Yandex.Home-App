@@ -116,7 +116,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
         className={`
           flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all duration-200
           ${isSelected 
-            ? 'border-purple-500 dark:border-primary bg-purple-50 dark:bg-primary/20 shadow-md scale-105' 
+            ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md scale-105' 
             : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 opacity-60 hover:opacity-80'
           }
         `}
@@ -126,7 +126,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
           className={`
             w-7 h-7 transition-all duration-200
             ${isSelected 
-              ? 'text-purple-600 dark:text-primary opacity-100' 
+              ? 'text-[#176f91] dark:text-primary opacity-100' 
               : 'text-gray-400 dark:text-slate-500 opacity-50'
             }
           `} 
@@ -134,7 +134,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
         <span className={`
           text-xs font-medium transition-all duration-200
           ${isSelected 
-            ? 'text-purple-600 dark:text-primary opacity-100' 
+            ? 'text-[#176f91] dark:text-primary opacity-100' 
             : 'text-gray-500 dark:text-slate-400 opacity-60'
           }
         `}>
@@ -261,7 +261,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
                   className={`
                     flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200
                     ${!oscillation 
-                      ? 'border-purple-500 dark:border-primary bg-purple-50 dark:bg-primary/20 shadow-md' 
+                      ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md' 
                       : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 opacity-60 hover:opacity-80'
                     }
                   `}
@@ -271,7 +271,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
                     className={`
                       w-5 h-5 transition-all duration-200
                       ${!oscillation 
-                        ? 'text-purple-600 dark:text-primary' 
+                        ? 'text-[#176f91] dark:text-primary' 
                         : 'text-gray-400 dark:text-slate-500'
                       }
                     `} 
@@ -279,7 +279,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
                   <span className={`
                     text-sm font-medium transition-all duration-200
                     ${!oscillation 
-                      ? 'text-purple-600 dark:text-primary' 
+                      ? 'text-[#176f91] dark:text-primary' 
                       : 'text-gray-500 dark:text-slate-400'
                     }
                   `}>
@@ -291,7 +291,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
                   className={`
                     flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200
                     ${oscillation 
-                      ? 'border-purple-500 dark:border-primary bg-purple-50 dark:bg-primary/20 shadow-md' 
+                      ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md' 
                       : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 opacity-60 hover:opacity-80'
                     }
                   `}
@@ -301,7 +301,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
                     className={`
                       w-5 h-5 transition-all duration-200
                       ${oscillation 
-                        ? 'text-purple-600 dark:text-primary' 
+                        ? 'text-[#176f91] dark:text-primary' 
                         : 'text-gray-400 dark:text-slate-500'
                       }
                     `} 
@@ -309,7 +309,7 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
                   <span className={`
                     text-sm font-medium transition-all duration-200
                     ${oscillation 
-                      ? 'text-purple-600 dark:text-primary' 
+                      ? 'text-[#176f91] dark:text-primary' 
                       : 'text-gray-500 dark:text-slate-400'
                     }
                   `}>
@@ -326,14 +326,14 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
           <button
             onClick={handleApply}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-purple-400 dark:border-primary text-purple-600 dark:text-primary hover:bg-purple-50 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-primary text-[#176f91] dark:text-primary hover:bg-[#176f91]/10 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Применить'}
           </button>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-600 dark:bg-primary hover:bg-purple-700 dark:hover:bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-[#145a72] text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Закрыть'}
           </button>

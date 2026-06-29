@@ -104,7 +104,7 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
       <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-purple-50 dark:bg-primary/20 text-purple-600 dark:text-primary">
+            <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20 text-[#176f91] dark:text-primary">
               <QrCode className="w-5 h-5" />
             </div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
@@ -124,7 +124,7 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
           <div className="flex flex-col items-center gap-3">
             {isStarting && (
               <div className="w-64 h-64 flex items-center justify-center bg-gray-50 dark:bg-slate-900 rounded-xl">
-                <Loader2 className="w-10 h-10 animate-spin text-purple-600 dark:text-primary" />
+                <Loader2 className="w-10 h-10 animate-spin text-[#176f91] dark:text-primary" />
               </div>
             )}
 

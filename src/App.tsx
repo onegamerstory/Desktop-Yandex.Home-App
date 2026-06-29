@@ -779,10 +779,13 @@ useEffect(() => {
   const NotificationToast = () => {
       if (!notification) return null;
       return (
-          <div className={`fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 border ${notification.type === 'error' ? 'bg-red-100 dark:bg-red-900/90 border-red-300 dark:border-red-500/30 text-red-900 dark:text-white' : 'bg-green-100 dark:bg-green-900/90 border-green-300 dark:border-green-500/30 text-green-900 dark:text-white'}`}>
-              {notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />} 
+          <div className={`fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 border bg-white dark:bg-white/90 dark:backdrop-blur-xl border-gray-200/80 dark:border-white/10 ${notification.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+              {notification.type === 'error'
+                  ? <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  : <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+              }
               <span className="text-sm font-medium">{notification.message}</span>
-              <button onClick={() => setNotification(null)} className="ml-2 opacity-70 hover:opacity-100">
+              <button onClick={() => setNotification(null)} className="ml-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors">
                   <X className="w-4 h-4"/>
               </button>
           </div>
@@ -794,10 +797,10 @@ useEffect(() => {
   // Экран загрузки
   if (appState === AppState.LOADING) {    console.log('[App] Rendering LOADING screen');    return (
       <ThemeProvider>
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="min-h-screen flex items-center justify-center bg-transparent">
           <div className="flex flex-col items-center gap-6">
             <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-600 dark:text-slate-400 animate-pulse">
+            <p className="text-white/70 animate-pulse">
               {retryInfo ? retryInfo.message : 'Загрузка данных...'}
             </p>
             {retryInfo && (

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { YandexHousehold, YandexRoom, YandexGroup, YandexScenario, YandexDevice } from '../types/index';
 import { getIconForScenario, getIconForDevice } from '../constants';
-import { Home, ChevronDown, SquareSquare, Heart } from 'lucide-react';
+import { Home, ChevronDown, SquareSquare, Star } from 'lucide-react';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
 
@@ -12,7 +12,6 @@ interface SidebarProps {
   roomsForHome: YandexRoom[];
   groupsForHome: YandexGroup[];
   activeScenarios: YandexScenario[];
-  allScenarios: YandexScenario[];
   devicesForHome: YandexDevice[];
   favoriteDeviceIds: string[];
   favoriteScenarioIds: string[];
@@ -38,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   roomsForHome,
   groupsForHome,
   activeScenarios,
-  allScenarios,
   devicesForHome,
   favoriteDeviceIds,
   favoriteScenarioIds,
@@ -57,12 +55,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectGroup,
 }) => {
   const [houseDropdownOpen, setHouseDropdownOpen] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const getStorageKey = (baseKey: string): string => {
+    if (!activeHouseholdId) return baseKey;
+    return `${baseKey}:household:${activeHouseholdId}`;
+  };
+
+  const loadCollapsedSections = (): Record<string, boolean> => {
+    try {
+      const stored = localStorage.getItem(getStorageKey('sidebar:collapsedSections'));
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  };
+
+  const saveCollapsedSections = (sections: Record<string, boolean>) => {
+    try {
+      localStorage.setItem(getStorageKey('sidebar:collapsedSections'), JSON.stringify(sections));
+    } catch (e) { console.error(e); }
+  };
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(loadCollapsedSections);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const toggleSection = (key: string) => {
-    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+    setCollapsedSections(prev => {
+      const updated = { ...prev, [key]: !prev[key] };
+      saveCollapsedSections(updated);
+      return updated;
+    });
   };
+
+  useEffect(() => {
+    setCollapsedSections(loadCollapsedSections());
+  }, [activeHouseholdId]);
 
   const currentHousehold = useMemo(() => {
     if (!households || households.length === 0) return null;
@@ -152,7 +177,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="device-fav is-fav"
                     style={{ position: 'static', opacity: 1 }}
                   >
-                    <Heart className="w-3 h-3" fill="currentColor" />
+                    <Star className="w-3 h-3" fill="currentColor" />
                   </button>
                 </div>
               ))}
@@ -175,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="device-fav is-fav"
                     style={{ position: 'static', opacity: 1 }}
                   >
-                    <Heart className="w-3 h-3" fill="currentColor" />
+                    <Star className="w-3 h-3" fill="currentColor" />
                   </button>
                 </div>
               );
@@ -204,7 +229,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="device-fav is-fav"
                     style={{ position: 'static', opacity: 1 }}
                   >
-                    <Heart className="w-3 h-3" fill="currentColor" />
+                    <Star className="w-3 h-3" fill="currentColor" />
                   </button>
                 </div>
               );
@@ -238,8 +263,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {groupsForHome.length > 0 && (
           <>
-            <div className="sidebar-section-title">Группы устройств</div>
-            {groupsForHome.map(group => {
+            <div className="sidebar-section-title" onClick={() => toggleSection('groups')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ChevronDown className="w-3 h-3" style={{ transform: collapsedSections['groups'] ? 'rotate(-90deg)' : 'none', transition: 'transform 150ms ease' }} />
+              Группы устройств
+            </div>
+            {!collapsedSections['groups'] && groupsForHome.map(group => {
               const count = group.devices.length;
               return (
                 <button
@@ -265,8 +293,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {activeScenarios.length > 0 && (
           <>
-            <div className="sidebar-section-title">Сценарии</div>
-            {activeScenarios.map(s => (
+            <div className="sidebar-section-title" onClick={() => toggleSection('scenarios')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ChevronDown className="w-3 h-3" style={{ transform: collapsedSections['scenarios'] ? 'rotate(-90deg)' : 'none', transition: 'transform 150ms ease' }} />
+              Сценарии
+            </div>
+            {!collapsedSections['scenarios'] && activeScenarios.map(s => (
               <div key={s.id} className="sidebar-item" style={{ paddingRight: '8px' }}>
                 <span className="sidebar-item-icon">
                   {React.cloneElement(getIconForScenario(s.icon, s.name) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })}
@@ -292,7 +323,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  <Heart className="w-3.5 h-3.5" fill={favoriteScenarioIds.includes(s.id) ? 'currentColor' : 'none'} />
+                  <Star className="w-3.5 h-3.5" fill={favoriteScenarioIds.includes(s.id) ? 'currentColor' : 'none'} />
                 </button>
               </div>
             ))}
