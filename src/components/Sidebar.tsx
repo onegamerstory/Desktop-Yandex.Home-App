@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { YandexHousehold, YandexRoom, YandexGroup, YandexScenario, YandexDevice } from '../types/index';
 import { getIconForScenario, getIconForDevice } from '../constants';
-import { Home, ChevronDown, SquareSquare, Star } from 'lucide-react';
+import { Home, ChevronDown, SquareSquare, Star, Loader2 } from 'lucide-react';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
 
@@ -55,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectGroup,
 }) => {
   const [houseDropdownOpen, setHouseDropdownOpen] = useState(false);
+  const [loadingItems, setLoadingItems] = useState<Record<string, boolean>>({});
 
   const getStorageKey = (baseKey: string): string => {
     if (!activeHouseholdId) return baseKey;
@@ -117,6 +118,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const withLoading = (key: string, action: () => Promise<void>): (() => void) => {
+    return () => {
+      if (loadingItems[key]) return;
+      setLoadingItems(prev => ({ ...prev, [key]: true }));
+      action().finally(() => {
+        setLoadingItems(prev => ({ ...prev, [key]: false }));
+      });
+    };
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -166,11 +177,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {favoriteScenarios.map(s => (
                 <div key={s.id} className="sidebar-item" style={{ paddingRight: '8px' }}>
                   <span className="sidebar-item-icon">
-                    {React.cloneElement(getIconForScenario(s.icon, s.name) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })}
+                    {loadingItems[`scenario:${s.id}`]
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : React.cloneElement(getIconForScenario(s.icon, s.name) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
+                    }
                   </span>
                   <span
                     style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
-                    onClick={() => onExecuteScenario(s.id)}
+                    onClick={withLoading(`scenario:${s.id}`, () => onExecuteScenario(s.id))}
                   >{s.name}</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleScenarioFavorite(s.id); }}
@@ -187,11 +201,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                 <div key={d.id} className="sidebar-item" style={{ paddingRight: '8px', opacity: 0.7 }}>
                   <span className="sidebar-item-icon">
-                    {React.cloneElement(getIconForDevice(d.type) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })}
+                    {loadingItems[`device:${d.id}`]
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : React.cloneElement(getIconForDevice(d.type) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
+                    }
                   </span>
                   <span
                     style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
-                    onClick={() => onToggleDevice(d.id, isOn)}
+                    onClick={withLoading(`device:${d.id}`, () => onToggleDevice(d.id, isOn))}
                   >
                     {d.name}
                   </span>
@@ -211,16 +228,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                 <div key={g.id} className="sidebar-item" style={{ paddingRight: '8px', opacity: 0.7 }}>
                   <span className="sidebar-item-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                    </svg>
+                    {loadingItems[`group:${g.id}`]
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7" />
+                          <rect x="14" y="3" width="7" height="7" />
+                          <rect x="3" y="14" width="7" height="7" />
+                          <rect x="14" y="14" width="7" height="7" />
+                        </svg>
+                    }
                   </span>
                   <span
                     style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
-                    onClick={() => onToggleGroup(g.id, isOn)}
+                    onClick={withLoading(`group:${g.id}`, () => onToggleGroup(g.id, isOn))}
                   >
                     {g.name}
                   </span>
@@ -300,11 +320,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!collapsedSections['scenarios'] && activeScenarios.map(s => (
               <div key={s.id} className="sidebar-item" style={{ paddingRight: '8px' }}>
                 <span className="sidebar-item-icon">
-                  {React.cloneElement(getIconForScenario(s.icon, s.name) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })}
+                  {loadingItems[`scenario:${s.id}`]
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : React.cloneElement(getIconForScenario(s.icon, s.name) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
+                  }
                 </span>
                 <span
                   style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
-                  onClick={() => onExecuteScenario(s.id)}
+                  onClick={withLoading(`scenario:${s.id}`, () => onExecuteScenario(s.id))}
                 >
                   {s.name}
                 </span>

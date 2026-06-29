@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../../types/index';
-import { getIconForDevice, localizeUnit, isCameraDevice } from '../../constants';
-import { Loader2, Star, Settings, Eye, EyeOff, Video } from 'lucide-react';
+import { getIconForDevice, localizeUnit, isCameraDevice, isAlwaysOnDevice } from '../../constants';
+import { Loader2, Star, Settings, Eye, EyeOff, Video, Mic, MicOff } from 'lucide-react';
 
 interface DeviceCardProps {
   device: YandexDevice;
@@ -25,10 +25,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
 
   const onOffCapability = device.capabilities.find(c => c.type === 'devices.capabilities.on_off');
   const isToggleable = !!onOffCapability;
-  const isOn = onOffCapability?.state?.value === true ||
-    device.type.toLowerCase().includes('smart_speaker') ||
-    device.type.toLowerCase().includes('hub') ||
-    device.type.toLowerCase().includes('other');
+  const isOn = onOffCapability?.state?.value === true;
+  const isAlwaysOn = !isToggleable && isAlwaysOnDevice(device);
 
   const sensorProperty = (device.properties ?? []).find(prop => {
     const anyProp = prop as any;
@@ -51,6 +49,12 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
     return type === 'devices.properties.float' && instance === 'humidity';
   }) as any | undefined;
 
+  const microphoneProperty = (device.properties ?? []).find(prop => {
+    const anyProp = prop as any;
+    const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+    return !!instance && (instance.includes('microphone') || instance.includes('mic') || instance.includes('mute'));
+  }) as any | undefined;
+
   const temperatureValue: number | null = temperatureProperty?.state?.value ?? null;
   const temperatureUnit = temperatureProperty?.parameters?.unit
     ? localizeUnit(temperatureProperty.parameters.unit)
@@ -66,6 +70,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
       : ' %';
 
   const isSensor = !isToggleable && !!sensorProperty;
+
+  const isMicrophoneSensor = isCamera && (!!microphoneProperty || isSensor);
+  const micState: string | undefined = microphoneProperty?.state?.value ?? sensorProperty?.state?.value;
+  const micInstance: string | undefined = (microphoneProperty || sensorProperty)?.parameters?.instance ?? (microphoneProperty || sensorProperty)?.state?.instance;
+  const isMuteType = !!micInstance && micInstance.includes('mute');
+  // Для mute-типов: mute enabled = микрофон ВЫКЛ, mute disabled = микрофон ВКЛ
+  // Для остальных: 'on'/'true' = микрофон ВКЛ
+  const micStateStr = String(micState ?? '');
+  const isMicOn = isMuteType
+    ? micStateStr.includes('disabled') || micStateStr === 'off' || micStateStr === 'false'
+    : micStateStr === 'on' || micStateStr === 'true';
 
   const sensorInstance: string | undefined = sensorProperty?.parameters?.instance ?? sensorProperty?.state?.instance;
   const rawSensorValue: unknown = sensorProperty?.state?.value;
@@ -115,11 +130,24 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
     <div
       onClick={handleClick}
       onContextMenu={handleContextMenu}
-      className={`device-card ${isToggleable && isOn ? 'is-on' : ''} ${isEditMode && iconHiddenState ? 'opacity-50 grayscale' : ''}`}
+      className={`device-card ${(isToggleable && isOn) || isCamera || isAlwaysOn ? 'is-on' : ''} ${isEditMode && iconHiddenState ? 'opacity-50 grayscale' : ''}`}
     >
       <div className="device-card-top">
-        <div className={`device-icon ${isOn && isToggleable ? 'is-on' : ''}`}>
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-4 h-4' })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className={`device-icon ${(isOn && isToggleable) || isCamera || isAlwaysOn ? 'is-on' : ''}`}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-4 h-4' })}
+          </div>
+          {isMicrophoneSensor && (
+            <span
+              className="flex-shrink-0"
+              title={isMicOn ? 'Микрофон включен' : 'Микрофон выключен'}
+            >
+              {isMicOn
+                ? <Mic className="w-3.5 h-3.5 text-green-400 dark:text-green-300" />
+                : <MicOff className="w-3.5 h-3.5 text-red-400 dark:text-red-300" />
+              }
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           {isEditMode && onToggleVisibility && (
@@ -159,11 +187,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
               {temperatureValue !== null && humidityValue !== null ? ' · ' : ''}
               {humidityValue !== null && `${humidityValue}${humidityUnit}`}
             </>
-          ) : isCamera ? 'Нажмите для просмотра' : isOn ? 'Включено' : 'Отключено'
+          ) : isCamera ? 'Нажмите для просмотра' : isToggleable ? (isOn ? 'Включено' : 'Отключено') : ''
         )}
       </div>
 
-      {isSensor && formattedSensorValue && (
+      {isSensor && formattedSensorValue && !isMicrophoneSensor && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 'auto' }}>
           <span className="device-sensor-value">{formattedSensorValue}</span>
         </div>

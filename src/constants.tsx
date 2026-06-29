@@ -68,8 +68,13 @@ export const getIconForScenario = (iconName?: string, scenarioName?: string): Re
 };
 
 export const isCameraDevice = (device: YandexDevice): boolean => {
-    return device.type === 'devices.types.camera'
+    return device.type.startsWith('devices.types.camera')
         || device.capabilities.some((cap) => cap.type === 'devices.capabilities.video_stream');
+};
+
+export const isAlwaysOnDevice = (device: YandexDevice): boolean => {
+    const t = device.type.toLowerCase();
+    return t.includes('smart_speaker') || t.includes('hub') || t.includes('other');
 };
 
 export const hasVideoStreamCapability = (device: YandexDevice): boolean => {
