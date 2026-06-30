@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { fetchUserInfo } from '../services/yandexIoT';
 import { AppState, YandexUserInfoResponse } from '../types/index';
 import { stableSortData } from '../utils/dataUtils';
+import { cleanErrorMessage } from '../utils/errors';
 
 const yandexApi = window.api;
 
@@ -43,11 +44,7 @@ export function useAuth(): UseAuthReturn {
             setAppState(AppState.DASHBOARD);
             // promptXTokenIfNeeded будет вызываться из useYandexData
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                setErrorMsg(err.message);
-            } else {
-                setErrorMsg('Неизвестная ошибка');
-            }
+            setErrorMsg(cleanErrorMessage(err));
             setAppState(AppState.AUTH);
             if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
                 await yandexApi.deleteSecureToken();

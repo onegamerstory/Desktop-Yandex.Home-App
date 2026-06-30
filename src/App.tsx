@@ -7,6 +7,7 @@ import { fetchUserInfo } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index';
 import { formatSensorValueForTray } from './constants';
 import { stableSortData } from './utils/dataUtils';
+import { cleanErrorMessage } from './utils/errors';
 import { NotificationToast } from './components/NotificationToast';
 import { ThemeProvider } from './contexts/ThemeContext';
 import DashboardContext from './contexts/DashboardContext';
@@ -47,6 +48,7 @@ function App() {
 
     const handleLoadData = useCallback(async (apiToken: string) => {
         setAppState(AppState.LOADING);
+        setErrorMsg(undefined);
         try {
             const data = await fetchUserInfo(apiToken);
             const sortedData = stableSortData(data);
@@ -54,11 +56,7 @@ function App() {
             setAppState(AppState.DASHBOARD);
             await promptXTokenIfNeeded(sortedData);
         } catch (err) {
-            if (err instanceof Error) {
-                setErrorMsg(err.message);
-            } else {
-                setErrorMsg('Ошибка при загрузке данных');
-            }
+            setErrorMsg(cleanErrorMessage(err));
             setAppState(AppState.AUTH);
             if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
                 await yandexApi.deleteSecureToken();
@@ -77,15 +75,17 @@ function App() {
         await yandexApi.deleteSecureToken();
         setToken(null);
         setUserData(null);
+        setErrorMsg(undefined);
         setAppState(AppState.AUTH);
-    }, [setToken, setUserData, setAppState]);
+    }, [setToken, setUserData, setErrorMsg, setAppState]);
 
     const handleCancelRetry = useCallback(async () => {
         await yandexApi.deleteSecureToken();
         setToken(null);
         setUserData(null);
+        setErrorMsg(undefined);
         setAppState(AppState.AUTH);
-    }, [setToken, setUserData, setAppState]);
+    }, [setToken, setUserData, setErrorMsg, setAppState]);
 
     // --- 1. Init-эффект (проверка токена при запуске) ---
     useEffect(() => {
@@ -96,6 +96,7 @@ function App() {
                 setToken(storedToken);
                 await handleLoadData(storedToken);
             } else {
+                setErrorMsg(undefined);
                 setAppState(AppState.AUTH);
             }
         };

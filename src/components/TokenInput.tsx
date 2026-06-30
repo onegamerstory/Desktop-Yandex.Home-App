@@ -25,7 +25,7 @@ export const TokenInput: React.FC<TokenInputProps> = ({ onTokenSubmit, isLoading
 
       <div className="w-full max-w-md p-8 bg-white/80 dark:bg-surface backdrop-blur-xl border border-gray-200 dark:border-border rounded-2xl shadow-2xl z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#176f91] to-[#20aac4] dark:bg-gradient-to-br dark:from-[#ea8411] dark:to-[#ea8411]/70 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-[#176f91]/30 dark:shadow-[#ea8411]/40">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#176f91] to-[#20aac4] dark:bg-gradient-to-br dark:from-[#ea8411] dark:to-[#ea8411]/70 rounded-2xl flex items-center justify-center mb-4 shadow-md shadow-[#176f91]/15 dark:shadow-[#ea8411]/20">
             <KeyRound className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-card-fg mb-2">Добро пожаловать</h1>
@@ -56,7 +56,7 @@ export const TokenInput: React.FC<TokenInputProps> = ({ onTokenSubmit, isLoading
           <button
             type="submit"
             disabled={isLoading || !token}
-            className="w-full bg-[#176f91] hover:bg-[#145a72] dark:bg-[#ea8411] dark:hover:bg-[#d6750f] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 group shadow-lg shadow-[#176f91]/30 dark:shadow-[#ea8411]/40"
+            className="w-full bg-[#176f91] hover:bg-[#145a72] dark:bg-[#ea8411] dark:hover:bg-[#d6750f] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 group shadow-md shadow-[#176f91]/15 dark:shadow-[#ea8411]/20"
           >
             {isLoading ? (
               <span className="w-5 h-5 border-2 border-gray-400 dark:border-white/30 border-t-gray-600 dark:border-t-white rounded-full animate-spin"></span>

@@ -16,6 +16,7 @@ const isRoomCredentialFresh = (room: YandexWebRtcRoom): boolean => {
   }
 };
 import { getQuasarCameraDevice } from '../../services/yandexIoT';
+import { cleanErrorMessage } from '../../utils/errors';
 import {
   hasCameraPrivacyControl,
   isCameraPrivacyModeEnabled,
@@ -218,7 +219,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
         });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось получить видеопоток';
+      const message = cleanErrorMessage(err);
       if (privacyEnabled || message.includes('приват') || message.includes('не умеет')) {
         setPrivacyNotice('Камера может быть в режиме приватности. Отключите его кнопкой ниже.');
       }
@@ -247,7 +248,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
         setPrivacyNotice('Режим приватности включён. Камера не передаёт видео.');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось изменить режим приватности';
+      const message = cleanErrorMessage(err);
       setError(message);
     } finally {
       setIsTogglingPrivacy(false);

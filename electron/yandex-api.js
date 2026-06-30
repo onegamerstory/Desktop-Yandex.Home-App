@@ -98,7 +98,7 @@ export const fetchUserInfo = async (token, onRetryAttempt = null) => {
             if (response.status === 401 || response.status === 403) {
                 throw new Error('Ошибка авторизации. Проверьте ваш токен.');
             }
-            throw new Error(`Ошибка загрузки данных: ${response.status} ${response.statusText}`);
+            throw new Error(`Не удалось загрузить список устройств. Попробуйте позже.`);
         }
 
         return await response.json();
@@ -120,7 +120,7 @@ export const fetchDevice = async (token, deviceId, onRetryAttempt = null) => {
             if (response.status === 401 || response.status === 403) {
                 throw new Error('Ошибка авторизации. Проверьте ваш токен.');
             }
-            throw new Error(`Не удалось получить устройство ${deviceId}: ${response.status} ${response.statusText}`);
+            throw new Error(`Не удалось загрузить данные устройства`);
         }
 
         return await response.json();
@@ -139,7 +139,7 @@ export const executeScenario = async (token, scenarioId, onRetryAttempt = null) 
         });
 
         if (!response.ok) {
-            throw new Error(`Не удалось запустить сценарий: ${response.status}`);
+            throw new Error(`Не удалось запустить сценарий. Попробуйте позже.`);
         }
     }, onRetryAttempt);
 };
@@ -174,13 +174,13 @@ export const toggleDevice = async (token, deviceId, newState, onRetryAttempt = n
         });
 
         if (!response.ok) {
-            throw new Error(`Не удалось изменить состояние устройства: ${response.status}`);
+            throw new Error(`Не удалось переключить устройство. Попробуйте позже.`);
         }
         
         const data = await response.json();
         const deviceResult = data.devices?.find((d) => d.id === deviceId);
         if (deviceResult && 'error_code' in deviceResult) {
-            throw new Error(`Ошибка устройства: ${deviceResult.error_message || deviceResult.error_code}`);
+            throw new Error(`Не удалось переключить устройство. Попробуйте позже.`);
         }
     }, onRetryAttempt);
 };
@@ -254,13 +254,13 @@ export const setDeviceMode = async (token, deviceId, modeActions, turnOn = false
         });
 
         if (!response.ok) {
-            throw new Error(`Не удалось изменить режим устройства: ${response.status}`);
+            throw new Error(`Не удалось изменить настройки устройства. Попробуйте позже.`);
         }
         
         const data = await response.json();
         const deviceResult = data.devices?.find((d) => d.id === deviceId);
         if (deviceResult && 'error_code' in deviceResult) {
-            throw new Error(`Ошибка устройства: ${deviceResult.error_message || deviceResult.error_code}`);
+            throw new Error(`Не удалось изменить настройки устройства. Попробуйте позже.`);
         }
     }, onRetryAttempt);
 };
@@ -297,14 +297,13 @@ export const toggleGroup = async (token, groupId, deviceIds, newState, onRetryAt
         });
 
         if (!response.ok) {
-            throw new Error(`Не удалось переключить группу: ${response.status}`);
+            throw new Error(`Не удалось переключить группу. Попробуйте позже.`);
         }
 
         const data = await response.json();
         const errors = (data.devices || []).filter(d => 'error_code' in d);
         if (errors.length > 0) {
-            const firstError = errors[0];
-            throw new Error(`Ошибка устройства: ${firstError.error_message || firstError.error_code}`);
+            throw new Error(`Не удалось переключить группу. Попробуйте позже.`);
         }
     }, onRetryAttempt);
 };
@@ -338,13 +337,13 @@ const sendIotDeviceAction = async (token, deviceId, action, onRetryAttempt = nul
         });
 
         if (!response.ok) {
-            throw new Error(`Не удалось изменить параметр устройства: ${response.status}`);
+            throw new Error(`Не удалось изменить параметр. Попробуйте позже.`);
         }
 
         const data = await response.json();
         const deviceResult = data.devices?.find((d) => d.id === deviceId);
         if (deviceResult && 'error_code' in deviceResult) {
-            throw new Error(deviceResult.error_message || deviceResult.error_code);
+            throw new Error(`Не удалось изменить параметр. Попробуйте позже.`);
         }
     }, onRetryAttempt);
 };

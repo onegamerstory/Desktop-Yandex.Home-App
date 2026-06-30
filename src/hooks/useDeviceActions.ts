@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { toggleDevice, toggleGroup, executeScenario, setDeviceMode, getCameraStream, setCameraPrivacyMode } from '../services/yandexIoT';
 import { YandexUserInfoResponse, YandexModeAction, CameraStreamResult } from '../types/index';
+import { cleanErrorMessage } from '../utils/errors';
 
 interface UseDeviceActionsReturn {
     handleToggleDevice: (deviceId: string, currentState: boolean) => Promise<void>;
@@ -27,11 +28,7 @@ export function useDeviceActions(
             // Пока оставим refreshDashboardData
             refreshDashboardData(token);
         } catch (err) {
-            if (err instanceof Error) {
-                showNotification(`Ошибка: ${err.message}`, 'error');
-            } else {
-                showNotification('Не удалось переключить устройство', 'error');
-            }
+            showNotification(`Ошибка: ${cleanErrorMessage(err)}`, 'error');
             throw err;
         }
     }, [token, userData, refreshDashboardData, showNotification]);
@@ -46,11 +43,7 @@ export function useDeviceActions(
             refreshDashboardData(token);
             showNotification('Группа успешно переключена', 'success');
         } catch (err) {
-            if (err instanceof Error) {
-                showNotification(`Ошибка: ${err.message}`, 'error');
-            } else {
-                showNotification('Не удалось переключить группу', 'error');
-            }
+            showNotification(`Ошибка: ${cleanErrorMessage(err)}`, 'error');
             throw err;
         }
     }, [token, userData, refreshDashboardData, showNotification]);
@@ -62,11 +55,7 @@ export function useDeviceActions(
             showNotification('Сценарий успешно запущен', 'success');
             refreshDashboardData(token);
         } catch (err) {
-            if (err instanceof Error) {
-                showNotification(err.message, 'error');
-            } else {
-                showNotification('Ошибка выполнения сценария', 'error');
-            }
+            showNotification(`Ошибка: ${cleanErrorMessage(err)}`, 'error');
             throw err;
         }
     }, [token, refreshDashboardData, showNotification]);
@@ -78,11 +67,7 @@ export function useDeviceActions(
             showNotification('Настройки успешно применены', 'success');
             refreshDashboardData(token);
         } catch (err) {
-            if (err instanceof Error) {
-                showNotification(err.message, 'error');
-            } else {
-                showNotification('Ошибка применения настроек', 'error');
-            }
+            showNotification(`Ошибка: ${cleanErrorMessage(err)}`, 'error');
             throw err;
         }
     }, [token, refreshDashboardData, showNotification]);

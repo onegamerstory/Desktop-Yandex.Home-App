@@ -41,7 +41,7 @@ const getQuasarSession = async (xToken) => {
     const passportHost = auth.passport_host?.replace(/\/$/, '');
     const trackId = auth.track_id;
     if (!passportHost || !trackId) {
-        throw new Error('Quasar auth: неполный ответ passport');
+        throw new Error('Ошибка авторизации Quasar: неполный ответ сервера');
     }
 
     const sessionResponse = await quasarFetch(`${passportHost}/auth/session/?track_id=${trackId}`, {
@@ -50,14 +50,14 @@ const getQuasarSession = async (xToken) => {
 
     const location = sessionResponse.headers.get('location') || '';
     if (!location.includes('/auth/finish')) {
-        throw new Error('Quasar auth: не удалось установить сессию passport');
+        throw new Error('Ошибка авторизации Quasar: не удалось установить сессию');
     }
 
     const storageResponse = await quasarFetch('https://yandex.ru/quasar?storage=1');
     const storage = await storageResponse.json();
     const uid = storage?.storage?.user?.uid;
     if (!uid) {
-        throw new Error('Quasar auth: сессия не подтверждена (нет uid)');
+        throw new Error('Ошибка авторизации Quasar: сессия не подтверждена');
     }
 
     const quasarPage = await quasarFetch('https://yandex.ru/quasar');
@@ -65,7 +65,7 @@ const getQuasarSession = async (xToken) => {
     const csrf = extractCsrfToken(html);
 
     if (!csrf) {
-        throw new Error('Не удалось получить CSRF-токен Quasar');
+        throw new Error('Ошибка авторизации Quasar: не удалось получить токен');
     }
 
     const session = { fetch: quasarFetch, csrf, jar };
@@ -78,7 +78,7 @@ const refreshCsrf = async (session) => {
     const html = await quasarPage.text();
     const csrf = extractCsrfToken(html);
     if (!csrf) {
-        throw new Error('Не удалось обновить CSRF-токен Quasar');
+        throw new Error('Ошибка авторизации Quasar: не удалось обновить токен');
     }
     session.csrf = csrf;
     return csrf;
@@ -88,11 +88,11 @@ const parseStreamFromDevices = (devices, deviceId) => {
     const device = devices?.find((item) => item.id === deviceId) ?? devices?.[0];
 
     if (!device) {
-        throw new Error('Камера не найдена в ответе Quasar API');
+        throw new Error('Камера не найдена');
     }
 
     if (device.error_code) {
-        throw new Error(device.error_message || device.error_code);
+        throw new Error('Ошибка получения видеопотока');
     }
 
     const capability = (device.capabilities || []).find(
@@ -105,14 +105,14 @@ const parseStreamFromDevices = (devices, deviceId) => {
 
     const actionResult = capability.state.action_result;
     if (actionResult?.status === 'ERROR') {
-        throw new Error(actionResult.error_message || actionResult.error_code || 'Не удалось получить видеопоток');
+        throw new Error('Не удалось получить видеопоток');
     }
 
     const streamUrl = capability.state.value?.stream_url;
     const protocol = capability.state.value?.protocol || 'hls';
 
     if (!streamUrl) {
-        throw new Error('URL видеопотока не получен');
+        throw new Error('Не удалось получить видеопоток');
     }
 
     return { streamUrl, protocol };
@@ -153,13 +153,13 @@ const requestHlsStream = async (xToken, deviceId) => {
     });
 
     if (!response.ok) {
-        throw new Error(`Quasar API: ${response.status} ${response.statusText}`);
+        throw new Error(`Не удалось получить видеопоток. Попробуйте позже.`);
     }
 
     const data = await response.json();
 
     if (data.status !== 'ok') {
-        throw new Error(data.message || data.text || 'Ошибка Quasar API при запросе видеопотока');
+        throw new Error('Не удалось получить видеопоток');
     }
 
     return parseStreamFromDevices(data.devices, deviceId);
@@ -182,7 +182,7 @@ const requestWebrtcRoom = async (xToken, deviceId) => {
 
     if (!response.ok) {
         console.error(`[Camera] create-room HTTP error: ${response.status} ${response.statusText}`);
-        throw new Error(`Quasar WebRTC: ${response.status} ${response.statusText}`);
+        throw new Error(`Не удалось получить видеопоток. Попробуйте позже.`);
     }
 
     const data = await response.json();
@@ -201,7 +201,7 @@ const requestWebrtcRoom = async (xToken, deviceId) => {
     const result = data.result;
 
     if (!result?.service_url) {
-        throw new Error(data.message || data.text || 'Не удалось создать WebRTC-комнату');
+        throw new Error('Не удалось получить видеопоток');
     }
 
     return {
@@ -267,19 +267,19 @@ export const getQuasarDevice = async (xToken, deviceId) => {
 
     const detailResponse = await session.fetch(`${QUASAR_ACTIONS_URL}/${deviceId}`);
     if (!detailResponse.ok) {
-        throw new Error(`Quasar API: ${detailResponse.status} ${detailResponse.statusText}`);
+        throw new Error('Ошибка загрузки данных камеры');
     }
 
     const detailData = await detailResponse.json();
     if (detailData.status !== 'ok') {
-        throw new Error(detailData.message || detailData.text || 'Ошибка Quasar API');
+        throw new Error('Ошибка загрузки данных камеры');
     }
 
     if (detailData.id === deviceId) {
         return detailData;
     }
 
-    throw new Error('Камера не найдена в Quasar API');
+    throw new Error('Камера не найдена');
 };
 
 export const buildPrivacyActionCandidates = (quasarDevice, privacyEnabled, toggleInstance = 'privacy') => {
@@ -368,20 +368,20 @@ const postQuasarDeviceActions = async (session, deviceId, actions) => {
     for (const url of urls) {
         const response = await session.fetch(url, { method: 'POST', headers, body });
         if (!response.ok) {
-            lastError = new Error(`Quasar API: ${response.status} ${response.statusText}`);
+            lastError = new Error('Не удалось выполнить действие. Попробуйте позже.');
             continue;
         }
 
         const data = await response.json();
         console.log(`[Quasar] ${url.includes('v3') ? 'v3' : 'v1'} response:`, JSON.stringify(data).slice(0, 400));
         if (data.status !== 'ok') {
-            lastError = new Error(data.message || data.text || 'Ошибка Quasar API');
+            lastError = new Error('Не удалось выполнить действие');
             continue;
         }
 
         const device = data.devices?.find((item) => item.id === deviceId) ?? data.devices?.[0];
         if (device?.error_code) {
-            lastError = new Error(device.error_message || device.error_code);
+            lastError = new Error('Не удалось выполнить действие');
             continue;
         }
 

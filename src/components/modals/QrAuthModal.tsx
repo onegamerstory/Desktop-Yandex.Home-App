@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, QrCode, X, Smartphone } from 'lucide-react';
+import { cleanErrorMessage } from '../../utils/errors';
 
 interface QrAuthModalProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
       }
     } catch (err) {
       stopPolling();
-      setError(err instanceof Error ? err.message : 'Ошибка проверки QR-входа');
+      setError(cleanErrorMessage(err));
     }
   }, [onSuccess, stopPolling]);
 
@@ -75,7 +76,7 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
       }, POLL_INTERVAL_MS);
       pollOnce();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось начать QR-авторизацию');
+      setError(cleanErrorMessage(err));
     } finally {
       setIsStarting(false);
     }
