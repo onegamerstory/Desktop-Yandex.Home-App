@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { YandexDevice, YandexGroup, YandexModeAction } from '../types/index';
+import { buildLightActions, LightActionSettings } from '../utils/deviceActions';
 
 // ---- Types ----
 
@@ -67,18 +68,8 @@ export interface UseDashboardStateReturn {
 
     // Apply handlers
     handleApplyThermostatSettings: (modeActions: YandexModeAction[]) => Promise<void>;
-    handleApplyLightBrightness: (settings: {
-        brightness?: number;
-        hsv?: { h: number; s: number; v: number };
-        rgb?: number;
-        temperature_k?: number;
-    }) => Promise<void>;
-    handleApplyGroupLightBrightness: (settings: {
-        brightness?: number;
-        hsv?: { h: number; s: number; v: number };
-        rgb?: number;
-        temperature_k?: number;
-    }) => Promise<void>;
+    handleApplyLightBrightness: (settings: LightActionSettings) => Promise<void>;
+    handleApplyGroupLightBrightness: (settings: LightActionSettings) => Promise<void>;
     handleApplyGroupThermostatSettings: (modeActions: Array<{ instance: string; value: string }>) => Promise<void>;
     handleApplyFanSettings: (modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean) => Promise<void>;
     handleApplyGroupFanSettings: (modeActions: Array<{ instance: string; value: any; type?: string }>, turnOn: boolean) => Promise<void>;
@@ -368,54 +359,20 @@ export function useDashboardState(
         await onSetDeviceMode(selectedThermostatDevice.id, modeActions, true);
     }, [selectedThermostatDevice, onSetDeviceMode]);
 
-    const handleApplyLightBrightness = useCallback(async (settings: {
-        brightness?: number;
-        hsv?: { h: number; s: number; v: number };
-        rgb?: number;
-        temperature_k?: number;
-    }) => {
+    const handleApplyLightBrightness = useCallback(async (settings: LightActionSettings) => {
         if (!selectedLightDevice) return;
-        const actions: any[] = [];
-        if (settings.brightness !== undefined) {
-            actions.push({ instance: 'brightness', value: settings.brightness.toString(), type: 'devices.capabilities.range' });
-        }
-        if (settings.hsv) {
-            actions.push({ instance: 'hsv', value: settings.hsv, type: 'devices.capabilities.color_setting' });
-        }
-        if (settings.rgb !== undefined) {
-            actions.push({ instance: 'rgb', value: settings.rgb, type: 'devices.capabilities.color_setting' });
-        }
-        if (settings.temperature_k !== undefined) {
-            actions.push({ instance: 'temperature_k', value: settings.temperature_k.toString(), type: 'devices.capabilities.color_setting' });
-        }
+        const actions = buildLightActions(settings);
         if (actions.length > 0) {
             await onSetDeviceMode(selectedLightDevice.id, actions, true);
         }
     }, [selectedLightDevice, onSetDeviceMode]);
 
-    const handleApplyGroupLightBrightness = useCallback(async (settings: {
-        brightness?: number;
-        hsv?: { h: number; s: number; v: number };
-        rgb?: number;
-        temperature_k?: number;
-    }) => {
+    const handleApplyGroupLightBrightness = useCallback(async (settings: LightActionSettings) => {
         if (!selectedLightGroup) return;
         const groupDevices = data.devices.filter(d => selectedLightGroup.devices.includes(d.id));
         if (groupDevices.length === 0) return;
         const updatePromises = groupDevices.map(async (device) => {
-            const actions: any[] = [];
-            if (settings.brightness !== undefined) {
-                actions.push({ instance: 'brightness', value: settings.brightness.toString(), type: 'devices.capabilities.range' });
-            }
-            if (settings.hsv) {
-                actions.push({ instance: 'hsv', value: settings.hsv, type: 'devices.capabilities.color_setting' });
-            }
-            if (settings.rgb !== undefined) {
-                actions.push({ instance: 'rgb', value: settings.rgb, type: 'devices.capabilities.color_setting' });
-            }
-            if (settings.temperature_k !== undefined) {
-                actions.push({ instance: 'temperature_k', value: settings.temperature_k.toString(), type: 'devices.capabilities.color_setting' });
-            }
+            const actions = buildLightActions(settings);
             if (actions.length > 0) {
                 await onSetDeviceMode(device.id, actions, true);
             }
