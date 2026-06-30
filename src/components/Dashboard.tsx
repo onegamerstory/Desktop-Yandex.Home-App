@@ -243,6 +243,7 @@ export const Dashboard: React.FC = () => {
                     onToggleGroupFavorite={ctx.onToggleGroupFavorite}
                     onExecuteScenario={ctx.onExecuteScenario}
                     onToggleDevice={ctx.onToggleDevice}
+                    onOpenCameraStream={state.openCameraStream}
                     onToggleGroup={ctx.onToggleGroup}
                     activeSidebarView={ctx.activeSidebarView}
                     activeRoomId={ctx.activeRoomId}

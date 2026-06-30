@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { YandexHousehold, YandexRoom, YandexGroup, YandexScenario, YandexDevice } from '../types/index';
-import { getIconForScenario, getIconForDevice } from '../constants';
+import { getIconForScenario, getIconForDevice, isCameraDevice } from '../constants';
 import { Home, ChevronDown, SquareSquare, Star, Loader2 } from 'lucide-react';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
@@ -21,6 +21,7 @@ interface SidebarProps {
   onToggleGroupFavorite: (id: string) => void;
   onExecuteScenario: (id: string) => Promise<void>;
   onToggleDevice: (id: string, currentState: boolean) => Promise<void>;
+  onOpenCameraStream?: (device: YandexDevice) => void;
   onToggleGroup: (id: string, currentState: boolean) => Promise<void>;
   activeSidebarView: 'home' | 'room' | 'group';
   activeRoomId: string | null;
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleGroupFavorite,
   onExecuteScenario,
   onToggleDevice,
+  onOpenCameraStream,
   onToggleGroup,
   activeSidebarView,
   activeRoomId,
@@ -208,7 +210,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                   <span
                     style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
-                    onClick={withLoading(`device:${d.id}`, () => onToggleDevice(d.id, isOn))}
+                    onClick={withLoading(`device:${d.id}`, async () => {
+                        if (isCameraDevice(d) && onOpenCameraStream) {
+                            onOpenCameraStream(d);
+                            return;
+                        }
+                        await onToggleDevice(d.id, isOn);
+                    })}
                   >
                     {d.name}
                   </span>
