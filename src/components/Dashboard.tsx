@@ -1015,21 +1015,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {showConfirmModal && (
         <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
-          <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-300">
+          <div className="bg-white dark:bg-surface border border-gray-200 dark:border-border-soft rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-300">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Подтверждение выхода</h3>
-              <button onClick={() => setShowConfirmModal(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-card-fg">Подтверждение выхода</h3>
+              <button onClick={() => setShowConfirmModal(false)} className="text-slate-600 dark:text-muted hover:text-slate-900 dark:hover:text-card-fg transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-slate-700 dark:text-slate-300 mb-6 text-sm">
+            <p className="text-slate-700 dark:text-card-fg mb-6 text-sm">
               Вы уверены, что хотите выйти из учетной записи? После этого действия для последующего входа потребуется токен.
             </p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowConfirmModal(false)} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
                 Нет
               </button>
-              <button onClick={() => { onLogout(); setShowConfirmModal(false); }} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary hover:bg-[#145a72] text-white">
+              <button onClick={() => { onLogout(); setShowConfirmModal(false); }} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary hover:bg-primary-hover text-white">
                 Да, уверен
               </button>
             </div>

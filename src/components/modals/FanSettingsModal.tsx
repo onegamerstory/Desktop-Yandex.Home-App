@@ -111,7 +111,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
           flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all duration-200
           ${isSelected 
             ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md scale-105' 
-            : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 opacity-60 hover:opacity-80'
+            : 'border-gray-200 dark:border-border bg-white dark:bg-surface hover:border-gray-300 dark:hover:border-border opacity-60 hover:opacity-80'
           }
         `}
         title={label}
@@ -121,7 +121,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
             w-7 h-7 transition-all duration-200
             ${isSelected 
               ? 'text-[#176f91] dark:text-primary opacity-100' 
-              : 'text-gray-400 dark:text-slate-500 opacity-50'
+              : 'text-gray-400 dark:text-muted opacity-50'
             }
           `} 
         />
@@ -129,7 +129,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
           text-xs font-medium transition-all duration-200
           ${isSelected 
             ? 'text-[#176f91] dark:text-primary opacity-100' 
-            : 'text-gray-500 dark:text-slate-400 opacity-60'
+            : 'text-gray-500 dark:text-muted opacity-60'
           }
         `}>
           {label}
@@ -197,20 +197,20 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-300">
+      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-border-soft rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-300">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-card-fg">
               Настройки вентилятора
             </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-sm text-slate-600 dark:text-muted mt-1">
               {device.name}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="text-slate-600 dark:text-muted hover:text-slate-900 dark:hover:text-card-fg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -221,7 +221,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
           {/* Fan Speed */}
           {fanSpeedCap && fanSpeedModes.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-card-fg mb-3">
                 Скорость вращения
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -246,7 +246,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
           {/* Oscillation Toggle */}
           {oscillationCapability && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-card-fg mb-3">
                 Вращение вентилятора
               </label>
               <div className="flex gap-2">
@@ -256,7 +256,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
                     flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200
                     ${!oscillation 
                       ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md' 
-                      : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 opacity-60 hover:opacity-80'
+                      : 'border-gray-200 dark:border-border bg-white dark:bg-surface hover:border-gray-300 dark:hover:border-border opacity-60 hover:opacity-80'
                     }
                   `}
                   title="Отключить вращение"
@@ -266,7 +266,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
                       w-5 h-5 transition-all duration-200
                       ${!oscillation 
                         ? 'text-[#176f91] dark:text-primary' 
-                        : 'text-gray-400 dark:text-slate-500'
+                        : 'text-gray-400 dark:text-muted'
                       }
                     `} 
                   />
@@ -274,7 +274,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
                     text-sm font-medium transition-all duration-200
                     ${!oscillation 
                       ? 'text-[#176f91] dark:text-primary' 
-                      : 'text-gray-500 dark:text-slate-400'
+                      : 'text-gray-500 dark:text-muted'
                     }
                   `}>
                     Выкл
@@ -286,7 +286,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
                     flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200
                     ${oscillation 
                       ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md' 
-                      : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 opacity-60 hover:opacity-80'
+                      : 'border-gray-200 dark:border-border bg-white dark:bg-surface hover:border-gray-300 dark:hover:border-border opacity-60 hover:opacity-80'
                     }
                   `}
                   title="Включить вращение"
@@ -296,7 +296,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
                       w-5 h-5 transition-all duration-200
                       ${oscillation 
                         ? 'text-[#176f91] dark:text-primary' 
-                        : 'text-gray-400 dark:text-slate-500'
+                        : 'text-gray-400 dark:text-muted'
                       }
                     `} 
                   />
@@ -304,7 +304,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
                     text-sm font-medium transition-all duration-200
                     ${oscillation 
                       ? 'text-[#176f91] dark:text-primary' 
-                      : 'text-gray-500 dark:text-slate-400'
+                      : 'text-gray-500 dark:text-muted'
                     }
                   `}>
                     Вкл
@@ -327,7 +327,7 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-[#145a72] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Закрыть'}
           </button>

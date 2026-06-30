@@ -101,17 +101,17 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
+      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-border-soft rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-border-soft">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20 text-[#176f91] dark:text-primary">
               <QrCode className="w-5 h-5" />
             </div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-card-fg">{title}</h2>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-lg text-gray-500 dark:text-muted hover:bg-gray-100 dark:hover:bg-surface transition-colors"
             title="Закрыть"
           >
             <X className="w-5 h-5" />
@@ -119,11 +119,11 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-400 text-center">{description}</p>
+          <p className="text-sm text-slate-600 dark:text-muted text-center">{description}</p>
 
           <div className="flex flex-col items-center gap-3">
             {isStarting && (
-              <div className="w-64 h-64 flex items-center justify-center bg-gray-50 dark:bg-slate-900 rounded-xl">
+              <div className="w-64 h-64 flex items-center justify-center bg-gray-50 dark:bg-surface rounded-xl">
                 <Loader2 className="w-10 h-10 animate-spin text-[#176f91] dark:text-primary" />
               </div>
             )}
@@ -132,12 +132,12 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
               <img
                 src={qrDataUrl}
                 alt="QR-код для входа в Яндекс"
-                className="w-64 h-64 rounded-xl border border-gray-200 dark:border-white/10"
+                className="w-64 h-64 rounded-xl border border-gray-200 dark:border-border-soft"
               />
             )}
 
             {isPolling && !error && (
-              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-muted">
                 <Smartphone className="w-4 h-4" />
                 <span>Ожидание подтверждения входа...</span>
               </div>
@@ -157,7 +157,7 @@ export const QrAuthModal: React.FC<QrAuthModalProps> = ({
           )}
 
           {qrUrl && (
-            <p className="text-[10px] text-center text-gray-400 dark:text-slate-500 break-all">
+            <p className="text-[10px] text-center text-gray-400 dark:text-muted break-all">
               Если QR не сканируется, откройте ссылку на телефоне: {qrUrl}
             </p>
           )}

@@ -401,17 +401,17 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
+      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-border-soft rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-border-soft">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20 text-[#176f91] dark:text-primary">
               <Video className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-card-fg truncate">
                 {cameraDevice.name}
               </h2>
-              <p className="text-xs text-gray-500 dark:text-slate-400">
+              <p className="text-xs text-gray-500 dark:text-muted">
                 {privacyEnabled
                   ? 'Режим приватности включён'
                   : streamProtocol
@@ -428,7 +428,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
                 className={`hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
                   privacyEnabled
                     ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20'
-                    : 'bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-700'
+                    : 'bg-gray-100 dark:bg-surface text-slate-700 dark:text-card-fg hover:bg-gray-200 dark:hover:bg-surface-warm'
                 }`}
                 title={privacyEnabled ? 'Отключить режим приватности' : 'Включить режим приватности'}
               >
@@ -449,7 +449,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
                 className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
                   isPictureInPicture
                     ? 'text-[#176f91] dark:text-primary bg-[#176f91]/10 dark:bg-primary/20'
-                    : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    : 'text-gray-500 dark:text-muted hover:bg-gray-100 dark:hover:bg-surface'
                 }`}
                 title={isPictureInPicture ? 'Закрыть окно поверх других' : 'Окно поверх других приложений'}
               >
@@ -459,7 +459,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
             <button
               onClick={() => videoRef.current?.requestFullscreen?.()}
               disabled={isLoading || !streamProtocol}
-              className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg text-gray-500 dark:text-muted hover:bg-gray-100 dark:hover:bg-surface transition-colors disabled:opacity-50"
               title="Полноэкранный режим"
             >
               <Maximize2 className="w-5 h-5" />
@@ -467,14 +467,14 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
             <button
               onClick={loadStream}
               disabled={isLoading || isTogglingPrivacy}
-              className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg text-gray-500 dark:text-muted hover:bg-gray-100 dark:hover:bg-surface transition-colors disabled:opacity-50"
               title="Обновить поток"
             >
               <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              className="p-2 rounded-lg text-gray-500 dark:text-muted hover:bg-gray-100 dark:hover:bg-surface transition-colors"
               title="Закрыть"
             >
               <X className="w-5 h-5" />
@@ -573,7 +573,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
           )}
         </div>
 
-        <div className="px-5 py-3 text-xs text-gray-500 dark:text-slate-400 border-t border-gray-200 dark:border-white/10">
+        <div className="px-5 py-3 text-xs text-gray-500 dark:text-muted border-t border-gray-200 dark:border-border-soft">
           WebRTC может показывать чёрный экран в режиме приватности. Переключите приватность как в приложении «Дом с Алисой».
         </div>
       </div>

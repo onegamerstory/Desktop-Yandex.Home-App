@@ -235,20 +235,20 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           background: linear-gradient(to right, #475569, #64748b);
         }
       `}</style>
-      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-surface border border-gray-200 dark:border-border-soft rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-card-fg">
               Настройки освещения группы
             </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-sm text-slate-600 dark:text-muted mt-1">
               {group.name} ({groupDevices.length} устройств)
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="text-slate-600 dark:text-muted hover:text-slate-900 dark:hover:text-card-fg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -258,9 +258,9 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           {/* Brightness Slider */}
           {brightnessRange && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-card-fg mb-3">
                 Яркость
-                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">({brightness}%)</span>
+                <span className="ml-2 text-xs text-slate-500 dark:text-muted">({brightness}%)</span>
               </label>
               <div className="flex items-center gap-4">
                 <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20">
@@ -276,7 +276,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
                   className="flex-1 accent-[#176f91] dark:accent-primary"
                 />
               </div>
-              <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
+              <div className="flex justify-between text-xs text-slate-500 dark:text-muted mt-2">
                 <span>{brightnessRange.min}%</span>
                 <span>{brightnessRange.max}%</span>
               </div>
@@ -291,7 +291,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'color'
                   ? 'bg-[#176f91] dark:bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
+                  : 'bg-gray-100 dark:bg-white/10 text-slate-700 dark:text-card-fg hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
               <Palette className="w-4 h-4" />
@@ -303,7 +303,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'temperature'
                   ? 'bg-[#176f91] dark:bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
+                  : 'bg-gray-100 dark:bg-white/10 text-slate-700 dark:text-card-fg hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
               <Thermometer className="w-4 h-4" />
@@ -314,7 +314,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           {/* Color Picker */}
           {colorMode === 'color' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-card-fg mb-3">
                 Выберите цвет
               </label>
               <div className="flex justify-center">
@@ -350,12 +350,12 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           {/* Temperature Slider */}
           {colorMode === 'temperature' && temperatureKRange && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-card-fg mb-3">
                 Температура света
-                <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">({temperatureKRange ? temperatureKRange.min + temperatureKRange.max - temperature_k : temperature_k}K)</span>
+                <span className="ml-2 text-xs text-slate-500 dark:text-muted">({temperatureKRange ? temperatureKRange.min + temperatureKRange.max - temperature_k : temperature_k}K)</span>
               </label>
               <div className="flex items-center gap-4">
-                <div className="text-xs text-slate-600 dark:text-slate-400 w-12">
+                <div className="text-xs text-slate-600 dark:text-muted w-12">
                   Холодно
                 </div>
                 <input
@@ -367,11 +367,11 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
                   onChange={e => setTemperature_k(Number(e.target.value))}
                   className="flex-1 accent-orange-500 dark:accent-orange-400 temp-slider"
                 />
-                <div className="text-xs text-slate-600 dark:text-slate-400 w-12 text-right">
+                <div className="text-xs text-slate-600 dark:text-muted w-12 text-right">
                   Тепло
                 </div>
               </div>
-              <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
+              <div className="flex justify-between text-xs text-slate-500 dark:text-muted mt-2">
                 <span>{temperatureKRange.max}K</span>
                 <span>{temperatureKRange.min}K</span>
               </div>
@@ -391,7 +391,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-[#145a72] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Закрыть'}
           </button>
