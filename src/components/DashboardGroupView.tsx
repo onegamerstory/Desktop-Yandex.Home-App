@@ -42,6 +42,7 @@ export const DashboardGroupView: React.FC<DashboardGroupViewProps> = ({
                         isEditMode={state.edit.isEditMode}
                         iconHiddenState={state.getIconHiddenState(`device_${dev.id}`)}
                         onToggleVisibility={() => state.toggleCardVisibility(`device_${dev.id}`)}
+                        sensorDisplayConfig={state.sensorDisplayConfig}
                     />
                 ))}
         </div>

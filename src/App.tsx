@@ -5,7 +5,7 @@ import { UpdateNotificationModal } from './components/modals/UpdateNotificationM
 import { QrAuthModal } from './components/modals/QrAuthModal';
 import { fetchUserInfo } from './services/yandexIoT';
 import { AppState, YandexUserInfoResponse, YandexDevice, YandexScenario, TrayMenuItem, TrayItemType, YandexHousehold } from './types/index';
-import { formatSensorValueForTray } from './constants';
+import { formatSensorValueForTray, TraySensorDisplayConfig } from './constants';
 import { stableSortData } from './utils/dataUtils';
 import { cleanErrorMessage } from './utils/errors';
 import { NotificationToast } from './components/NotificationToast';
@@ -107,9 +107,20 @@ function App() {
     const getTrayMenuItems = useCallback((
         data: YandexUserInfoResponse | null,
         favDevices: string[],
-        favScenarios: string[]
+        favScenarios: string[],
+        householdId: string | null
     ): TrayMenuItem[] => {
         if (!data) return [];
+
+        // Load user's sensor display config from localStorage (same key pattern as useDashboardState)
+        let sensorDisplayConfig: Record<string, TraySensorDisplayConfig> = {};
+        try {
+            const storageKey = householdId
+                ? `dashboard:sensorDisplayConfig:household:${householdId}`
+                : 'dashboard:sensorDisplayConfig';
+            const stored = localStorage.getItem(storageKey);
+            if (stored) sensorDisplayConfig = JSON.parse(stored);
+        } catch { /* ignore */ }
 
         const deviceMap = new Map(data.devices.map(d => [d.id, d]));
         const scenarioMap = new Map(data.scenarios.map(s => [s.id, s]));
@@ -131,7 +142,8 @@ function App() {
                 // Calculate sensor value for devices that have temperature/humidity properties
                 let sensorValue: string | null = null;
                 if ((isSensorOrMeter && !isToggleable) || isClimateDevice) {
-                    sensorValue = formatSensorValueForTray(device);
+                    const deviceConfig = sensorDisplayConfig[device.id] ?? null;
+                    sensorValue = formatSensorValueForTray(device, deviceConfig);
                 }
 
                 return {
@@ -160,10 +172,10 @@ function App() {
     // --- 3. Tray-эффект (отправка избранного в трей) ---
     useEffect(() => {
         if (appState === AppState.DASHBOARD && userData) {
-            const trayItems = getTrayMenuItems(userData, favoriteDeviceIds, favoriteScenarioIds);
+            const trayItems = getTrayMenuItems(userData, favoriteDeviceIds, favoriteScenarioIds, activeHouseholdId);
             yandexApi.sendFavoritesToTray(trayItems);
         }
-    }, [appState, userData, favoriteDeviceIds, favoriteScenarioIds, getTrayMenuItems]);
+    }, [appState, userData, favoriteDeviceIds, favoriteScenarioIds, activeHouseholdId, getTrayMenuItems]);
 
     // --- 4. Tray-эффект (обработка команд из трея) ---
     useEffect(() => {

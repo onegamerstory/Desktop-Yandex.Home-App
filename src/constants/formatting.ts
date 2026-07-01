@@ -137,29 +137,46 @@ const TRAY_UNIT_FALLBACK: Record<string, string> = {
 };
 
 /**
- * Formats first 3 sensor properties for tray display.
- * Order: main (3rd property) → secondary1 (1st) → secondary2 (2nd),
+ * Configuration for which sensor properties to display.
+ * Matches SensorDisplayConfig from SensorSettingsModal.
+ */
+export interface TraySensorDisplayConfig {
+    primaryIndex: number;
+    secondaryIndexes: number[];
+}
+
+/**
+ * Formats sensor properties for tray display, respecting optional user config.
+ * 
+ * When displayConfig is provided, uses the user's property selection (primary + up to 2 secondary).
+ * Without config, uses default ordering: main (3rd property) → secondary1 (1st) → secondary2 (2nd),
  * matching the card layout.
+ * 
  * @param device - The Yandex device containing properties
+ * @param displayConfig - Optional user-selected property indices
  * @returns Formatted string (e.g. "📊 750.00   🌡️ 24.50 °C   💧 45.00 %") or null
  */
-export const formatSensorValueForTray = (device: { properties?: Array<{
-    type?: string;
-    parameters?: {
-        instance?: string;
-        unit?: string;
-        events?: Array<{ value: string; name: string }>;
-    };
-    state?: {
-        instance?: string;
-        value?: unknown;
-        unit?: string;
-    };
-}> }): string | null => {
+export const formatSensorValueForTray = (
+    device: { properties?: Array<{
+        type?: string;
+        parameters?: {
+            instance?: string;
+            unit?: string;
+            events?: Array<{ value: string; name: string }>;
+        };
+        state?: {
+            instance?: string;
+            value?: unknown;
+            unit?: string;
+        };
+    }> },
+    displayConfig?: TraySensorDisplayConfig | null
+): string | null => {
     if (!device.properties || device.properties.length === 0) return null;
 
-    // Extract up to 3 properties with non-empty state value (same logic as SensorCard)
+    // Extract properties with original index (same logic as SensorCard)
     const extracted: Array<{
+        index: number;
         instance: string;
         value: unknown;
         unit?: string;
@@ -167,14 +184,15 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
         events?: Array<{ value: string; name: string }>;
     }> = [];
 
-    for (const prop of device.properties) {
-        if (extracted.length >= 3) break;
+    for (let i = 0; i < device.properties.length; i++) {
+        const prop = device.properties[i];
         const anyProp = prop as any;
         const type: string | undefined = anyProp?.type;
         const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
         const value: unknown = anyProp?.state?.value;
         if (typeof type !== 'string' || !type.includes('devices.properties') || !instance || value === undefined) continue;
         extracted.push({
+            index: i,
             instance,
             value,
             unit: anyProp?.parameters?.unit ?? anyProp?.state?.unit,
@@ -185,7 +203,7 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
 
     if (extracted.length === 0) return null;
 
-    // Format a single property value for tray
+    // Helper to format a single property value for tray
     const formatOne = (p: typeof extracted[0]): string => {
         const emoji = TRAY_INSTANCE_EMOJI[p.instance] ?? '🔹';
 
@@ -212,15 +230,28 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
         return `${emoji} ${String(p.value ?? '—')}`;
     };
 
-    // Order: main (3rd property) → secondary1 (1st) → secondary2 (2nd)
-    const ordered: typeof extracted = [];
-    const mainIdx = extracted.length >= 3 ? 2 : extracted.length - 1;
+    let ordered: typeof extracted = [];
 
-    // Main first
-    ordered.push(extracted[mainIdx]);
-    // Then secondary1, secondary2 (skip if same as main)
-    for (let i = 0; i < Math.min(extracted.length, 2); i++) {
-        if (i !== mainIdx) ordered.push(extracted[i]);
+    if (displayConfig) {
+        // Use user-configured selection: primary first, then secondary
+        const primary = extracted.find(p => p.index === displayConfig.primaryIndex);
+        if (primary) {
+            ordered.push(primary);
+            const secondary = displayConfig.secondaryIndexes
+                .map(idx => extracted.find(p => p.index === idx))
+                .filter((p): p is typeof extracted[0] => p !== undefined && p.index !== displayConfig.primaryIndex)
+                .slice(0, 2);
+            ordered.push(...secondary);
+        }
+    }
+
+    // If no config or primary not found, fall back to default ordering
+    if (ordered.length === 0) {
+        const mainIdx = extracted.length >= 3 ? 2 : extracted.length - 1;
+        ordered.push(extracted[mainIdx]);
+        for (let i = 0; i < Math.min(extracted.length, 2); i++) {
+            if (i !== mainIdx) ordered.push(extracted[i]);
+        }
     }
 
     return ordered.map(formatOne).join('   ');

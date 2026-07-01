@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { YandexDevice, YandexGroup, YandexModeAction } from '../types/index';
 import { buildLightActions, LightActionSettings } from '../utils/deviceActions';
+import { isSensorDevice } from '../constants/deviceTypes';
+import { SensorDisplayConfig } from '../components/modals/SensorSettingsModal';
 
 // ---- Types ----
 
@@ -14,6 +16,7 @@ interface ModalState {
     selectedThermostatGroup: YandexGroup | null;
     selectedFanGroup: YandexGroup | null;
     selectedCameraDevice: YandexDevice | null;
+    selectedSensorDevice: YandexDevice | null;
 }
 
 interface CollapseState {
@@ -47,6 +50,8 @@ export interface UseDashboardStateReturn {
     closeFanGroupSettings: () => void;
     openCameraStream: (device: YandexDevice) => void;
     closeCameraStream: () => void;
+    openSensorSettings: (device: YandexDevice) => void;
+    closeSensorSettings: () => void;
     setShowConfirmModal: (show: boolean) => void;
     setShowInfoModal: (show: boolean) => void;
 
@@ -65,6 +70,10 @@ export interface UseDashboardStateReturn {
     getEffectiveHidden: (cardId: string) => boolean;
     getIconHiddenState: (cardId: string) => boolean;
     getEffectiveWithChanges: (cardId: string) => boolean;
+
+    // Sensor display config
+    sensorDisplayConfig: Record<string, SensorDisplayConfig>;
+    setSensorDisplayConfig: (deviceId: string, config: SensorDisplayConfig) => void;
 
     // Apply handlers
     handleApplyThermostatSettings: (modeActions: YandexModeAction[]) => Promise<void>;
@@ -134,6 +143,35 @@ export function useDashboardState(
     const [selectedThermostatGroup, setSelectedThermostatGroup] = useState<YandexGroup | null>(null);
     const [selectedFanGroup, setSelectedFanGroup] = useState<YandexGroup | null>(null);
     const [selectedCameraDevice, setSelectedCameraDevice] = useState<YandexDevice | null>(null);
+    const [selectedSensorDevice, setSelectedSensorDevice] = useState<YandexDevice | null>(null);
+
+    // --- SENSOR DISPLAY CONFIG ---
+    const loadSensorDisplayConfig = (householdId: string | null): Record<string, SensorDisplayConfig> => {
+        try {
+            const key = getStorageKey('dashboard:sensorDisplayConfig', householdId);
+            const stored = localStorage.getItem(key);
+            return stored ? JSON.parse(stored) : {};
+        } catch { return {}; }
+    };
+
+    const saveSensorDisplayConfig = (householdId: string | null, config: Record<string, SensorDisplayConfig>): void => {
+        try {
+            const key = getStorageKey('dashboard:sensorDisplayConfig', householdId);
+            localStorage.setItem(key, JSON.stringify(config));
+        } catch (e) { console.error(e); }
+    };
+
+    const [sensorDisplayConfig, setSensorDisplayConfigState] = useState<Record<string, SensorDisplayConfig>>(() =>
+        loadSensorDisplayConfig(activeHouseholdId)
+    );
+
+    const setSensorDisplayConfig = useCallback((deviceId: string, config: SensorDisplayConfig) => {
+        setSensorDisplayConfigState(prev => {
+            const newConfig = { ...prev, [deviceId]: config };
+            saveSensorDisplayConfig(activeHouseholdId, newConfig);
+            return newConfig;
+        });
+    }, [activeHouseholdId]);
 
     // --- COLLAPSE STATE ---
     const [isScenariosCollapsed, setIsScenariosCollapsed] = useState(() =>
@@ -240,6 +278,7 @@ export function useDashboardState(
             setHiddenCardIds(stored ? new Set(JSON.parse(stored)) : new Set());
         } catch { setHiddenCardIds(new Set()); }
         setVisibilityChanges(new Map());
+        setSensorDisplayConfigState(loadSensorDisplayConfig(activeHouseholdId));
     }, [activeHouseholdId]);
 
     // --- Collapse toggle handlers ---
@@ -342,15 +381,27 @@ export function useDashboardState(
         setSelectedCameraDevice(null);
     }, []);
 
+    const openSensorSettings = useCallback((device: YandexDevice) => {
+        setSelectedSensorDevice(device);
+    }, []);
+
+    const closeSensorSettings = useCallback(() => {
+        setSelectedSensorDevice(null);
+    }, []);
+
     const handleOpenDeviceSettings = useCallback((device: YandexDevice) => {
         if (isCameraDevice(device)) {
             openCameraStream(device);
             return;
         }
+        if (isSensorDevice(device)) {
+            openSensorSettings(device);
+            return;
+        }
         if (isLightDevice(device.type)) openLightSettings(device);
         else if (device.type === 'devices.types.ventilation.fan') openFanSettings(device);
         else openThermostatSettings(device);
-    }, [isCameraDevice, isLightDevice, openCameraStream, openLightSettings, openFanSettings, openThermostatSettings]);
+    }, [isCameraDevice, isLightDevice, openCameraStream, openLightSettings, openFanSettings, openThermostatSettings, openSensorSettings]);
 
     // --- Apply handlers ---
 
@@ -423,6 +474,7 @@ export function useDashboardState(
             selectedThermostatGroup,
             selectedFanGroup,
             selectedCameraDevice,
+            selectedSensorDevice,
         },
         openThermostatSettings,
         closeThermostatSettings,
@@ -438,6 +490,8 @@ export function useDashboardState(
         closeFanGroupSettings,
         openCameraStream,
         closeCameraStream,
+        openSensorSettings,
+        closeSensorSettings,
         setShowConfirmModal,
         setShowInfoModal,
 
@@ -466,6 +520,10 @@ export function useDashboardState(
         getEffectiveHidden,
         getIconHiddenState,
         getEffectiveWithChanges,
+
+        // Sensor display config
+        sensorDisplayConfig,
+        setSensorDisplayConfig,
 
         // Apply handlers
         handleApplyThermostatSettings,

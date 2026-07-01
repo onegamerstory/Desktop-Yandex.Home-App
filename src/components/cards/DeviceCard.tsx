@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { YandexDevice } from '../../types/index';
 import { getIconForDevice, localizeUnit, isCameraDevice, isAlwaysOnDevice } from '../../constants';
 import { Loader2, Star, Settings, Eye, EyeOff, Video, Mic, MicOff, Thermometer, Droplets } from 'lucide-react';
+import { SensorDisplayConfig } from '../modals/SensorSettingsModal';
 
 export interface DeviceCardProps {
   device: YandexDevice;
@@ -13,6 +14,7 @@ export interface DeviceCardProps {
   isEditMode?: boolean;
   iconHiddenState?: boolean;
   onToggleVisibility?: (id: string) => void;
+  sensorDisplayConfig?: Record<string, SensorDisplayConfig>;
 }
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavorite, onToggleFavorite, onOpenSettings, onOpenCameraStream, isEditMode = false, iconHiddenState = false, onToggleVisibility }) => {

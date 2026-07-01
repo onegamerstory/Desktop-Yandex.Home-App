@@ -11,6 +11,7 @@ import { GroupThermostatSettingsModal } from './modals/GroupThermostatSettingsMo
 import { FanSettingsModal } from './modals/FanSettingsModal';
 import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
 import { CameraStreamModal } from './modals/CameraStreamModal';
+import { SensorSettingsModal } from './modals/SensorSettingsModal';
 import { InfoModal } from './modals/InfoModal';
 import { Pencil, Power, Sun, Moon, RefreshCw, Info, LogOut, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -400,6 +401,16 @@ export const Dashboard: React.FC = () => {
                     onGetStream={ctx.onGetCameraStream}
                     onSetPrivacy={ctx.onSetCameraPrivacy}
                     onPrivacyChanged={ctx.onRefresh}
+                />
+            )}
+
+            {state.modal.selectedSensorDevice && (
+                <SensorSettingsModal
+                    device={state.modal.selectedSensorDevice}
+                    isOpen={!!state.modal.selectedSensorDevice}
+                    onClose={state.closeSensorSettings}
+                    onSave={state.setSensorDisplayConfig}
+                    initialConfig={state.sensorDisplayConfig[state.modal.selectedSensorDevice.id] ?? null}
                 />
             )}
 

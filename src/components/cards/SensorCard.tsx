@@ -1,8 +1,9 @@
 import React from 'react';
 import { YandexDevice } from '../../types/index';
 import { getIconForDevice, localizeUnit } from '../../constants';
+import { SensorDisplayConfig } from '../modals/SensorSettingsModal';
 import {
-  Star, Eye, EyeOff, Thermometer, Droplets, Sun, Gauge, Wind, BatteryFull,
+  Star, Eye, EyeOff, Settings, Thermometer, Droplets, Sun, Gauge, Wind, BatteryFull,
   Waves, Footprints, DoorOpen, AlarmSmoke, Flame, Vibrate, Droplet,
   MousePointerClick, CircleDot
 } from 'lucide-react';
@@ -44,10 +45,12 @@ interface SensorCardProps {
   isEditMode?: boolean;
   iconHiddenState?: boolean;
   onToggleVisibility?: (id: string) => void;
+  sensorDisplayConfig?: Record<string, SensorDisplayConfig>;
 }
 
 interface PropertyData {
   key: string;
+  originalIndex: number;
   instance: string;
   rawValue: unknown;
   type: string;
@@ -55,22 +58,27 @@ interface PropertyData {
   events?: Array<{ value: string; name: string }>;
 }
 
+/**
+ * Extract all valid properties with their original index in device.properties array.
+ * Used both for display and for config matching.
+ */
 const extractProperties = (device: YandexDevice): PropertyData[] => {
   const props = device.properties ?? [];
   const result: PropertyData[] = [];
-  
-  for (let i = 0; i < props.length && result.length < 3; i++) {
+
+  for (let i = 0; i < props.length; i++) {
     const anyProp = props[i] as any;
     const type: string | undefined = anyProp?.type;
     const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
     const value: unknown = anyProp?.state?.value;
-    
+
     if (typeof type !== 'string' || !type.includes('devices.properties') || !instance || value === undefined) {
       continue;
     }
-    
+
     result.push({
       key: `${instance}_${i}`,
+      originalIndex: i,
       instance,
       rawValue: value,
       type,
@@ -78,7 +86,7 @@ const extractProperties = (device: YandexDevice): PropertyData[] => {
       events: anyProp?.parameters?.events as Array<{ value: string; name: string }> | undefined,
     });
   }
-  
+
   return result;
 };
 
@@ -122,9 +130,39 @@ export const SensorCard: React.FC<SensorCardProps> = ({
   isEditMode = false,
   iconHiddenState = false,
   onToggleVisibility,
+  sensorDisplayConfig,
 }) => {
-  const props = extractProperties(device);
-  const mainProp = props.length >= 3 ? props[2] : props[props.length - 1];
+  const allProps = extractProperties(device);
+
+  // Determine which properties to show based on saved config, with fallback
+  const config = sensorDisplayConfig?.[device.id];
+
+  let primaryProp: PropertyData | undefined;
+  let secondaryProps: PropertyData[] = [];
+
+  if (config && allProps.length > 0) {
+    // Try to match by originalIndex
+    primaryProp = allProps.find(p => p.originalIndex === config.primaryIndex);
+    secondaryProps = config.secondaryIndexes
+      .map(idx => allProps.find(p => p.originalIndex === idx))
+      .filter((p): p is PropertyData => p !== undefined)
+      .filter(p => p !== primaryProp)
+      .slice(0, 2);
+  }
+
+  // If no config or config doesn't match, fall back to default behavior
+  if (!primaryProp) {
+    if (allProps.length >= 3) {
+      primaryProp = allProps[2];
+      secondaryProps = [allProps[0], allProps[1]];
+    } else if (allProps.length === 2) {
+      primaryProp = allProps[1];
+      secondaryProps = [allProps[0]];
+    } else if (allProps.length === 1) {
+      primaryProp = allProps[0];
+      secondaryProps = [];
+    }
+  }
 
   const icon = getIconForDevice(device.type);
 
@@ -164,6 +202,16 @@ export const SensorCard: React.FC<SensorCardProps> = ({
               {iconHiddenState ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </div>
           )}
+          {onOpenSettings && (
+            <div
+              onClick={(e) => { e.stopPropagation(); onOpenSettings(device); }}
+              style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              className="settings-btn"
+              title="Настройки отображения"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </div>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(device.id); }}
             className={`device-fav ${isFavorite ? 'is-fav' : ''}`}
@@ -175,30 +223,26 @@ export const SensorCard: React.FC<SensorCardProps> = ({
 
       <div className="device-name">{device.name}</div>
 
-      {props.length > 0 && (
+      {secondaryProps.length > 0 && (
         <div className="device-type-label">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-            {getIconForInstance(props[0].instance, 'w-3.5 h-3.5')}
-            {formatMainValue(props[0])}
-          </span>
-          {props.length >= 2 && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6 }}>
-              {getIconForInstance(props[1].instance, 'w-3.5 h-3.5')}
-              {formatMainValue(props[1])}
+          {secondaryProps.map((prop, idx) => (
+            <span key={prop.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: idx > 0 ? 6 : 0 }}>
+              {getIconForInstance(prop.instance, 'w-3.5 h-3.5')}
+              {formatMainValue(prop)}
             </span>
-          )}
+          ))}
         </div>
       )}
 
-      {mainProp && <hr className="sensor-divider" />}
+      {primaryProp && <hr className="sensor-divider" />}
 
-      {mainProp && (
+      {primaryProp && (
         <div className="sensor-main-value">
           <span className="sensor-main-icon">
-            {getIconForInstance(mainProp.instance, 'w-4 h-4')}
+            {getIconForInstance(primaryProp.instance, 'w-4 h-4')}
           </span>
           <span className="sensor-main-text">
-            {formatMainValue(mainProp)}
+            {formatMainValue(primaryProp)}
           </span>
         </div>
       )}
