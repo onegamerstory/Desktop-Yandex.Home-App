@@ -36,7 +36,7 @@ export interface DashboardContextValue {
     isRefreshing: boolean;
     isAutostartEnabled: boolean;
     onToggleAutostart: () => void;
-    onSwitchHousehold: () => void;
+    onSwitchHousehold: (householdId?: string) => void;
     onLogout: () => void;
 }
 

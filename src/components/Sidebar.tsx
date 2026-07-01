@@ -8,7 +8,7 @@ const DEFAULT_HOME_NAME = 'Мой Дом';
 interface SidebarProps {
   households: YandexHousehold[];
   activeHouseholdId: string | null;
-  onSwitchHousehold: () => void;
+  onSwitchHousehold: (householdId?: string) => void;
   roomsForHome: YandexRoom[];
   groupsForHome: YandexGroup[];
   activeScenarios: YandexScenario[];
@@ -147,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (h.id !== activeHouseholdId) {
-                      onSwitchHousehold();
+                      onSwitchHousehold(h.id);
                     }
                     setHouseDropdownOpen(false);
                   }}
