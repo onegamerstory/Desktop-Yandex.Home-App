@@ -108,11 +108,40 @@ export const formatSensorValue = (device: { properties?: Array<{
     return null;
 };
 
+/** Emoji icons for tray display mapped by property instance */
+const TRAY_INSTANCE_EMOJI: Record<string, string> = {
+    temperature: '🌡️',
+    humidity: '💧',
+    illumination: '☀️',
+    pressure: '📊',
+    co2_level: '🫁',
+    pm1_density: '🌬️',
+    pm2_5_density: '🌬️',
+    pm10_density: '🌬️',
+    tvoc: '🌬️',
+    battery_level: '🔋',
+    water_level: '🌊',
+    motion: '🚶',
+    open: '🚪',
+    smoke: '🔥',
+    gas: '🔥',
+    vibration: '📳',
+    water_leak: '💧',
+    button: '🔘',
+};
+
+/** Unit fallback by instance for tray */
+const TRAY_UNIT_FALLBACK: Record<string, string> = {
+    humidity: '%',
+    temperature: '°C',
+};
+
 /**
- * Formats sensor values (temperature and humidity) for tray display
- * Returns a compact string suitable for system tray menu
+ * Formats first 3 sensor properties for tray display.
+ * Order: main (3rd property) → secondary1 (1st) → secondary2 (2nd),
+ * matching the card layout.
  * @param device - The Yandex device containing properties
- * @returns Formatted sensor value string (e.g., "24.5°C 65%") or null if no sensor data found
+ * @returns Formatted string (e.g. "📊 750.00   🌡️ 24.50 °C   💧 45.00 %") or null
  */
 export const formatSensorValueForTray = (device: { properties?: Array<{
     type?: string;
@@ -127,51 +156,72 @@ export const formatSensorValueForTray = (device: { properties?: Array<{
         unit?: string;
     };
 }> }): string | null => {
-    if (!device.properties || device.properties.length === 0) {
-        return null;
-    }
+    if (!device.properties || device.properties.length === 0) return null;
 
-    // Extract temperature property
-    const temperatureProperty = device.properties.find(prop => {
+    // Extract up to 3 properties with non-empty state value (same logic as SensorCard)
+    const extracted: Array<{
+        instance: string;
+        value: unknown;
+        unit?: string;
+        type: string;
+        events?: Array<{ value: string; name: string }>;
+    }> = [];
+
+    for (const prop of device.properties) {
+        if (extracted.length >= 3) break;
         const anyProp = prop as any;
         const type: string | undefined = anyProp?.type;
         const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
-        return type === 'devices.properties.float' && instance === 'temperature';
-    }) as any;
-
-    // Extract humidity property
-    const humidityProperty = device.properties.find(prop => {
-        const anyProp = prop as any;
-        const type: string | undefined = anyProp?.type;
-        const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
-        return type === 'devices.properties.float' && instance === 'humidity';
-    }) as any;
-
-    // Get temperature value and unit
-    const temperatureValue: number | null = temperatureProperty?.state?.value ?? null;
-    const temperatureUnit = temperatureProperty?.parameters?.unit 
-        ? localizeUnit(temperatureProperty.parameters.unit) 
-        : temperatureProperty?.state?.unit 
-            ? localizeUnit(temperatureProperty.state.unit)
-            : '°C';
-
-    // Get humidity value and unit
-    const humidityValue: number | null = humidityProperty?.state?.value ?? null;
-    const humidityUnit = humidityProperty?.parameters?.unit 
-        ? localizeUnit(humidityProperty.parameters.unit)
-        : humidityProperty?.state?.unit 
-            ? localizeUnit(humidityProperty.state.unit)
-            : '%';
-
-    // Build the output string with icons
-    const parts: string[] = [];
-    if (temperatureValue !== null) {
-        parts.push(`🌡️ ${temperatureValue}${temperatureUnit}`);
-    }
-    if (humidityValue !== null) {
-        parts.push(`💧 ${humidityValue}${humidityUnit}`);
+        const value: unknown = anyProp?.state?.value;
+        if (typeof type !== 'string' || !type.includes('devices.properties') || !instance || value === undefined) continue;
+        extracted.push({
+            instance,
+            value,
+            unit: anyProp?.parameters?.unit ?? anyProp?.state?.unit,
+            type,
+            events: anyProp?.parameters?.events as Array<{ value: string; name: string }> | undefined,
+        });
     }
 
-    // Return null if no sensor values found, otherwise return the formatted string
-    return parts.length > 0 ? parts.join(' ') : null;
+    if (extracted.length === 0) return null;
+
+    // Format a single property value for tray
+    const formatOne = (p: typeof extracted[0]): string => {
+        const emoji = TRAY_INSTANCE_EMOJI[p.instance] ?? '🔹';
+
+        // Event properties → localized name
+        if (p.type === 'devices.properties.event' && typeof p.value === 'string') {
+            if (p.events && Array.isArray(p.events)) {
+                const match = p.events.find(e => e.value === p.value);
+                if (match) return `${emoji} ${match.name}`;
+            }
+            return `${emoji} ${p.value}`;
+        }
+
+        // Numbers → toFixed(2)
+        if (typeof p.value === 'number') {
+            const locUnit = localizeUnit(p.unit) || (TRAY_UNIT_FALLBACK[p.instance] ? ` ${TRAY_UNIT_FALLBACK[p.instance]}` : '');
+            return `${emoji} ${Number(p.value).toFixed(2)}${locUnit}`;
+        }
+
+        // Boolean
+        if (typeof p.value === 'boolean') {
+            return `${emoji} ${p.value ? 'Да' : 'Нет'}`;
+        }
+
+        return `${emoji} ${String(p.value ?? '—')}`;
+    };
+
+    // Order: main (3rd property) → secondary1 (1st) → secondary2 (2nd)
+    const ordered: typeof extracted = [];
+    const mainIdx = extracted.length >= 3 ? 2 : extracted.length - 1;
+
+    // Main first
+    ordered.push(extracted[mainIdx]);
+    // Then secondary1, secondary2 (skip if same as main)
+    for (let i = 0; i < Math.min(extracted.length, 2); i++) {
+        if (i !== mainIdx) ordered.push(extracted[i]);
+    }
+
+    return ordered.map(formatOne).join('   ');
 };

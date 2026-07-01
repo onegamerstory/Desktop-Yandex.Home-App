@@ -28,3 +28,7 @@ export const isAlwaysOnDevice = (device: YandexDevice): boolean => {
     const t = device.type.toLowerCase();
     return t.includes('smart_speaker') || t.includes('hub') || t.includes('other');
 };
+
+export const isSensorDevice = (device: { type: string }): boolean => {
+    return device.type.startsWith('devices.types.sensor') || device.type === 'devices.types.smart_meter';
+};

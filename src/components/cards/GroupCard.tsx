@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { YandexGroup, YandexDevice } from '../../types/index';
-import { DeviceCard } from './DeviceCard';
+import { DeviceCardAdapter } from './DeviceCardAdapter';
 import { Loader2, Power, ChevronDown, ChevronRight, Settings, Star } from 'lucide-react';
 import { isLightGroup } from '../../constants';
 
@@ -128,17 +128,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
           {visibleDevices.length > 0 ? (
             <div className="device-grid">
               {visibleDevices.map(device => (
-                <DeviceCard
-                  key={device.id}
-                  device={device}
-                  onToggle={onToggleDevice}
-                  isFavorite={favoriteDeviceIds.includes(device.id)}
-                  onToggleFavorite={onToggleDeviceFavorite}
-                  onOpenSettings={onOpenSettings}
-                  isEditMode={isEditMode}
-                  iconHiddenState={getIconHiddenState(`device_${device.id}`)}
-                  onToggleVisibility={() => onToggleDeviceVisibility?.(`device_${device.id}`)}
-                />
+                <DeviceCardAdapter key={device.id} device={device} onToggle={onToggleDevice} isFavorite={favoriteDeviceIds.includes(device.id)} onToggleFavorite={onToggleDeviceFavorite} onOpenSettings={onOpenSettings} isEditMode={isEditMode} iconHiddenState={getIconHiddenState(`device_${device.id}`)} onToggleVisibility={() => onToggleDeviceVisibility?.(`device_${device.id}`)} />
               ))}
             </div>
           ) : (

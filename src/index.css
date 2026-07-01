@@ -979,3 +979,69 @@ body {
   background: var(--border);
   border-radius: 2px;
 }
+
+/* Sensor card properties list */
+.sensor-card {
+  background: var(--card-bg-active);
+  border-color: transparent;
+}
+
+[data-theme="dark"] .sensor-card {
+  border-color: var(--border-soft);
+}
+
+.sensor-card .device-name {
+  color: var(--card-fg-active);
+}
+
+.sensor-card .device-type-label {
+  color: var(--muted);
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.sensor-card .device-fav {
+  color: var(--fg-2);
+}
+
+.sensor-card .device-fav.is-fav {
+  color: var(--fav-star);
+}
+
+[data-theme="dark"] .sensor-card:hover {
+  border-color: var(--border);
+}
+
+.sensor-card .settings-btn,
+.sensor-card .edit-vis-btn {
+  color: var(--card-fg-active);
+  opacity: 0.5;
+}
+
+/* Sensor card — main value display */
+.sensor-main-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+.sensor-main-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+  color: var(--fg-2);
+  display: flex;
+  align-items: center;
+}
+.sensor-main-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--card-fg-active);
+  line-height: 1.1;
+}
+/* Sensor card — divider */
+.sensor-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 0;
+  opacity: 0.5;
+}

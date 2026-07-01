@@ -3,7 +3,7 @@ import { YandexDevice } from '../../types/index';
 import { getIconForDevice, localizeUnit, isCameraDevice, isAlwaysOnDevice } from '../../constants';
 import { Loader2, Star, Settings, Eye, EyeOff, Video, Mic, MicOff } from 'lucide-react';
 
-interface DeviceCardProps {
+export interface DeviceCardProps {
   device: YandexDevice;
   onToggle: (id: string, currentState: boolean) => Promise<void>;
   isFavorite: boolean;

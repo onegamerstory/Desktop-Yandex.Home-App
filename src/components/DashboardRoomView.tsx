@@ -1,7 +1,7 @@
 import React from 'react';
 import { YandexRoom, YandexDevice, YandexGroup } from '../types/index';
-import { DeviceCard } from './cards/DeviceCard';
 import { GroupCard } from './cards/GroupCard';
+import { DeviceCardAdapter } from './cards/DeviceCardAdapter';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { UseDashboardStateReturn } from '../hooks/useDashboardState';
 import { isLightGroup } from '../constants';
@@ -45,18 +45,7 @@ export const DashboardRoomView: React.FC<DashboardRoomViewProps> = ({
                     {standaloneDevices
                         .filter(d => !state.getEffectiveHidden(`device_${d.id}`))
                         .map(dev => (
-                            <DeviceCard
-                                key={dev.id}
-                                device={dev}
-                                onToggle={ctx.onToggleDevice}
-                                isFavorite={ctx.favoriteDeviceIds.includes(dev.id)}
-                                onToggleFavorite={ctx.onToggleDeviceFavorite}
-                                onOpenSettings={state.handleOpenDeviceSettings}
-                                onOpenCameraStream={state.openCameraStream}
-                                isEditMode={state.edit.isEditMode}
-                                iconHiddenState={state.getIconHiddenState(`device_${dev.id}`)}
-                                onToggleVisibility={() => state.toggleCardVisibility(`device_${dev.id}`)}
-                            />
+                            <DeviceCardAdapter key={dev.id} device={dev} onToggle={ctx.onToggleDevice} isFavorite={ctx.favoriteDeviceIds.includes(dev.id)} onToggleFavorite={ctx.onToggleDeviceFavorite} onOpenSettings={state.handleOpenDeviceSettings} onOpenCameraStream={state.openCameraStream} isEditMode={state.edit.isEditMode} iconHiddenState={state.getIconHiddenState(`device_${dev.id}`)} onToggleVisibility={() => state.toggleCardVisibility(`device_${dev.id}`)} />
                         ))}
                 </div>
             )}
