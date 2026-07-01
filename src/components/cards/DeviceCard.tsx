@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../../types/index';
 import { getIconForDevice, localizeUnit, isCameraDevice, isAlwaysOnDevice } from '../../constants';
-import { Loader2, Star, Settings, Eye, EyeOff, Video, Mic, MicOff } from 'lucide-react';
+import { Loader2, Star, Settings, Eye, EyeOff, Video, Mic, MicOff, Thermometer, Droplets } from 'lucide-react';
 
 export interface DeviceCardProps {
   device: YandexDevice;
@@ -182,11 +182,21 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
       <div className="device-type-label">
         {loading ? 'Обновление...' : (
           temperatureValue !== null || humidityValue !== null ? (
-            <>
-              {temperatureValue !== null && `${temperatureValue}${temperatureUnit}`}
-              {temperatureValue !== null && humidityValue !== null ? ' · ' : ''}
-              {humidityValue !== null && `${humidityValue}${humidityUnit}`}
-            </>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              {temperatureValue !== null && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                  <Thermometer className="w-3.5 h-3.5" style={{ opacity: 0.75 }} />
+                  {`${temperatureValue}${temperatureUnit}`}
+                </span>
+              )}
+              {temperatureValue !== null && humidityValue !== null && <span style={{ margin: '0 3px' }}>·</span>}
+              {humidityValue !== null && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                  <Droplets className="w-3.5 h-3.5" style={{ opacity: 0.75 }} />
+                  {`${humidityValue}${humidityUnit}`}
+                </span>
+              )}
+            </span>
           ) : isCamera ? 'Нажмите для просмотра' : isToggleable ? (isOn ? 'Включено' : 'Отключено') : ''
         )}
       </div>

@@ -650,7 +650,7 @@ body {
 }
 
 .device-type-label {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--card-fg);
   opacity: 0.6;
   margin-top: -4px;
