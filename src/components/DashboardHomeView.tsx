@@ -5,7 +5,7 @@ import { GroupCard } from './cards/GroupCard';
 import { DeviceCardAdapter } from './cards/DeviceCardAdapter';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { UseDashboardStateReturn } from '../hooks/useDashboardState';
-import { isLightGroup } from '../constants';
+import { isLightGroup, isSensorDevice } from '../constants';
 import { Building2, SquareSquare, ScrollText, Lightbulb, Star, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface DashboardHomeViewProps {
@@ -17,10 +17,15 @@ interface DashboardHomeViewProps {
     favoriteScenarios: YandexScenario[];
     favoriteDevices: YandexDevice[];
     favoriteGroups: YandexGroup[];
+    favoriteSensorDevices: YandexDevice[];
+    favoriteNonSensorDevices: YandexDevice[];
     visibleFavoriteScenarios: YandexScenario[];
     visibleFavoriteDevices: YandexDevice[];
+    visibleFavoriteSensorDevices: YandexDevice[];
+    visibleFavoriteNonSensorDevices: YandexDevice[];
     visibleFavoriteGroups: YandexGroup[];
     hasFavorites: boolean;
+    hasFavoriteSensors: boolean;
 }
 
 export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
@@ -32,10 +37,15 @@ export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
     favoriteScenarios,
     favoriteDevices,
     favoriteGroups,
+    favoriteSensorDevices,
+    favoriteNonSensorDevices,
     visibleFavoriteScenarios,
     visibleFavoriteDevices,
+    visibleFavoriteSensorDevices,
+    visibleFavoriteNonSensorDevices,
     visibleFavoriteGroups,
     hasFavorites,
+    hasFavoriteSensors,
 }) => {
     const ctx = useDashboardContext();
 
@@ -66,6 +76,23 @@ export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
                     <h2>Избранное</h2>
                 </div>
 
+                {/* Sensors — first at the top */}
+                {visibleFavoriteSensorDevices.length > 0 && (
+                    <>
+                        <div className="section-header" style={{ marginBottom: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Датчики</span>
+                                <span className="section-count">{visibleFavoriteSensorDevices.length}</span>
+                            </div>
+                        </div>
+                        <div className="device-grid" style={{ marginBottom: 16 }}>
+                            {visibleFavoriteSensorDevices.map(device => (
+                                <DeviceCardAdapter key={device.id} device={device} onToggle={ctx.onToggleDevice} isFavorite={true} onToggleFavorite={ctx.onToggleDeviceFavorite} onOpenSettings={state.handleOpenDeviceSettings} onOpenCameraStream={state.openCameraStream} isEditMode={state.edit.isEditMode} iconHiddenState={state.getIconHiddenState(`device_${device.id}`)} onToggleVisibility={() => state.toggleCardVisibility(`device_${device.id}`)} sensorDisplayConfig={state.sensorDisplayConfig} />
+                            ))}
+                        </div>
+                    </>
+                )}
+
                 {visibleFavoriteScenarios.length > 0 && (
                     <>
                         <div className="section-header" style={{ marginBottom: 10 }}>
@@ -91,16 +118,16 @@ export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
                     </>
                 )}
 
-                {visibleFavoriteDevices.length > 0 && (
+                {visibleFavoriteNonSensorDevices.length > 0 && (
                     <>
                         <div className="section-header" style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Устройства</span>
-                                <span className="section-count">{visibleFavoriteDevices.length}</span>
+                                <span className="section-count">{visibleFavoriteNonSensorDevices.length}</span>
                             </div>
                         </div>
                         <div className="device-grid" style={{ marginBottom: 16 }}>
-                            {visibleFavoriteDevices.map(device => (
+                            {visibleFavoriteNonSensorDevices.map(device => (
                                 <DeviceCardAdapter key={device.id} device={device} onToggle={ctx.onToggleDevice} isFavorite={true} onToggleFavorite={ctx.onToggleDeviceFavorite} onOpenSettings={state.handleOpenDeviceSettings} onOpenCameraStream={state.openCameraStream} isEditMode={state.edit.isEditMode} iconHiddenState={state.getIconHiddenState(`device_${device.id}`)} onToggleVisibility={() => state.toggleCardVisibility(`device_${device.id}`)} sensorDisplayConfig={state.sensorDisplayConfig} />
                             ))}
                         </div>

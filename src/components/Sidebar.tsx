@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { YandexHousehold, YandexRoom, YandexGroup, YandexScenario, YandexDevice } from '../types/index';
-import { getIconForScenario, getIconForDevice, isCameraDevice } from '../constants';
+import { getIconForScenario, getIconForDevice, isCameraDevice, isSensorDevice } from '../constants';
 import { Home, ChevronDown, SquareSquare, Star, Loader2 } from 'lucide-react';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
@@ -110,6 +110,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const favoriteDevices = devicesForHome.filter(d => favoriteDeviceIds.includes(d.id));
   const favoriteGroups = groupsForHome.filter(g => favoriteGroupIds.includes(g.id));
 
+  const favoriteSensorDevices = useMemo(() => {
+    return favoriteDevices
+      .filter(d => isSensorDevice(d))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [favoriteDevices]);
+
+  const favoriteRegularDevices = useMemo(() => {
+    return favoriteDevices
+      .filter(d => !isSensorDevice(d))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [favoriteDevices]);
+
+  // All sensor devices for the Датчики section (always shown)
+  const allSensors = devicesForHome.filter(d => isSensorDevice(d));
+  const hasSensors = allSensors.length > 0;
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -197,39 +213,72 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 </div>
               ))}
-              {favoriteDevices.slice(0, 5).map(d => {
+              {favoriteSensorDevices.slice(0, 5).map(d => {
                 const onOff = d.capabilities?.find(c => c.type === 'devices.capabilities.on_off');
                 const isOn = onOff?.state?.value === true;
                 return (
-                <div key={d.id} className="sidebar-item" style={{ paddingRight: '8px', opacity: 0.7 }}>
-                  <span className="sidebar-item-icon">
-                    {loadingItems[`device:${d.id}`]
-                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      : React.cloneElement(getIconForDevice(d.type) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
-                    }
-                  </span>
-                  <span
-                    style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
-                    onClick={withLoading(`device:${d.id}`, async () => {
-                        if (isCameraDevice(d) && onOpenCameraStream) {
-                            onOpenCameraStream(d);
-                            return;
-                        }
-                        await onToggleDevice(d.id, isOn);
-                    })}
-                  >
-                    {d.name}
-                  </span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onToggleDeviceFavorite(d.id); }}
-                    className="device-fav is-fav"
-                    style={{ position: 'static', opacity: 1 }}
-                  >
-                    <Star className="w-3 h-3" fill="currentColor" />
-                  </button>
-                </div>
-              );
-            })}
+                  <div key={d.id} className="sidebar-item" style={{ paddingRight: '8px', opacity: 0.7 }}>
+                    <span className="sidebar-item-icon">
+                      {loadingItems[`device:${d.id}`]
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : React.cloneElement(getIconForDevice(d.type) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
+                      }
+                    </span>
+                    <span
+                      style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
+                      onClick={withLoading(`device:${d.id}`, async () => {
+                          if (isCameraDevice(d) && onOpenCameraStream) {
+                              onOpenCameraStream(d);
+                              return;
+                          }
+                          await onToggleDevice(d.id, isOn);
+                      })}
+                    >
+                      {d.name}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleDeviceFavorite(d.id); }}
+                      className="device-fav is-fav"
+                      style={{ position: 'static', opacity: 1 }}
+                    >
+                      <Star className="w-3 h-3" fill="currentColor" />
+                    </button>
+                  </div>
+                );
+              })}
+              {favoriteRegularDevices.slice(0, 5).map(d => {
+                const onOff = d.capabilities?.find(c => c.type === 'devices.capabilities.on_off');
+                const isOn = onOff?.state?.value === true;
+                return (
+                  <div key={d.id} className="sidebar-item" style={{ paddingRight: '8px', opacity: 0.7 }}>
+                    <span className="sidebar-item-icon">
+                      {loadingItems[`device:${d.id}`]
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : React.cloneElement(getIconForDevice(d.type) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })
+                      }
+                    </span>
+                    <span
+                      style={{ flex: 1, fontSize: 13, cursor: 'pointer' }}
+                      onClick={withLoading(`device:${d.id}`, async () => {
+                          if (isCameraDevice(d) && onOpenCameraStream) {
+                              onOpenCameraStream(d);
+                              return;
+                          }
+                          await onToggleDevice(d.id, isOn);
+                      })}
+                    >
+                      {d.name}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleDeviceFavorite(d.id); }}
+                      className="device-fav is-fav"
+                      style={{ position: 'static', opacity: 1 }}
+                    >
+                      <Star className="w-3 h-3" fill="currentColor" />
+                    </button>
+                  </div>
+                );
+              })}
               {favoriteGroups.map(g => {
                 const onOff = g.capabilities?.find(c => c.type === 'devices.capabilities.on_off');
                 const isOn = onOff?.state?.value === true;
@@ -263,6 +312,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
             </>)}
+          </>
+        )}
+
+        {hasSensors && (
+          <>
+            <div className="sidebar-section-title" onClick={() => toggleSection('sensors')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ChevronDown className="w-3 h-3" style={{ transform: collapsedSections['sensors'] ? 'rotate(-90deg)' : 'none', transition: 'transform 150ms ease' }} />
+              Датчики
+              <span className="sidebar-item-badge">{allSensors.length}</span>
+            </div>
+            {!collapsedSections['sensors'] && allSensors.map(d => {
+              const isFav = favoriteDeviceIds.includes(d.id);
+              return (
+                <div key={d.id} className="sidebar-item" style={{ paddingRight: '8px', opacity: 0.7 }}>
+                  <span className="sidebar-item-icon">
+                    {React.cloneElement(getIconForDevice(d.type) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5' })}
+                  </span>
+                  <span style={{ flex: 1, fontSize: 13 }}>
+                    {d.name}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleDeviceFavorite(d.id); }}
+                    className={isFav ? 'device-fav is-fav' : ''}
+                    style={{
+                      position: 'static',
+                      ...(isFav
+                        ? {}
+                        : {
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 2,
+                            flexShrink: 0,
+                          }),
+                    }}
+                  >
+                    <Star className="w-3.5 h-3.5" fill={isFav ? 'currentColor' : 'none'} />
+                  </button>
+                </div>
+              );
+            })}
           </>
         )}
 

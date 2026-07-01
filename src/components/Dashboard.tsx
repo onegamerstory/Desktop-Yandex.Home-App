@@ -17,7 +17,7 @@ import { Pencil, Power, Sun, Moon, RefreshCw, Info, LogOut, X } from 'lucide-rea
 import { useTheme } from '../contexts/ThemeContext';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { useDashboardState } from '../hooks/useDashboardState';
-import { isLightDevice, isLightGroup, isCameraDevice } from '../constants';
+import { isLightDevice, isLightGroup, isCameraDevice, isSensorDevice } from '../constants';
 import packageJson from '../../package.json';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
@@ -124,11 +124,18 @@ export const Dashboard: React.FC = () => {
     const favoriteDevices = devicesForHome.filter(d => ctx.favoriteDeviceIds.includes(d.id));
     const favoriteGroups = groupsForHome.filter(g => ctx.favoriteGroupIds.includes(g.id));
 
+    // Split devices into sensors and non-sensors
+    const favoriteSensorDevices = favoriteDevices.filter(d => isSensorDevice(d));
+    const favoriteNonSensorDevices = favoriteDevices.filter(d => !isSensorDevice(d));
+
     const visibleFavoriteScenarios = favoriteScenarios.filter(s => !state.getEffectiveHidden(`scenario_${s.id}`));
     const visibleFavoriteDevices = favoriteDevices.filter(d => !state.getEffectiveHidden(`device_${d.id}`));
+    const visibleFavoriteSensorDevices = favoriteSensorDevices.filter(d => !state.getEffectiveHidden(`device_${d.id}`));
+    const visibleFavoriteNonSensorDevices = favoriteNonSensorDevices.filter(d => !state.getEffectiveHidden(`device_${d.id}`));
     const visibleFavoriteGroups = favoriteGroups.filter(g => !state.getEffectiveHidden(`group_${g.id}`));
 
     const hasFavorites = favoriteScenarios.length > 0 || favoriteDevices.length > 0 || favoriteGroups.length > 0;
+    const hasFavoriteSensors = favoriteSensorDevices.length > 0;
 
     // ---- Content title/subtitle ----
     const contentTitle = useMemo(() => {
@@ -180,10 +187,15 @@ export const Dashboard: React.FC = () => {
                         favoriteScenarios={favoriteScenarios}
                         favoriteDevices={favoriteDevices}
                         favoriteGroups={favoriteGroups}
+                        favoriteSensorDevices={favoriteSensorDevices}
+                        favoriteNonSensorDevices={favoriteNonSensorDevices}
                         visibleFavoriteScenarios={visibleFavoriteScenarios}
                         visibleFavoriteDevices={visibleFavoriteDevices}
+                        visibleFavoriteSensorDevices={visibleFavoriteSensorDevices}
+                        visibleFavoriteNonSensorDevices={visibleFavoriteNonSensorDevices}
                         visibleFavoriteGroups={visibleFavoriteGroups}
                         hasFavorites={hasFavorites}
+                        hasFavoriteSensors={hasFavoriteSensors}
                     />
                 );
             case 'room':
@@ -216,10 +228,15 @@ export const Dashboard: React.FC = () => {
                         favoriteScenarios={favoriteScenarios}
                         favoriteDevices={favoriteDevices}
                         favoriteGroups={favoriteGroups}
+                        favoriteSensorDevices={favoriteSensorDevices}
+                        favoriteNonSensorDevices={favoriteNonSensorDevices}
                         visibleFavoriteScenarios={visibleFavoriteScenarios}
                         visibleFavoriteDevices={visibleFavoriteDevices}
+                        visibleFavoriteSensorDevices={visibleFavoriteSensorDevices}
+                        visibleFavoriteNonSensorDevices={visibleFavoriteNonSensorDevices}
                         visibleFavoriteGroups={visibleFavoriteGroups}
                         hasFavorites={hasFavorites}
+                        hasFavoriteSensors={hasFavoriteSensors}
                     />
                 );
         }
