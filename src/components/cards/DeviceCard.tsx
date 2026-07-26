@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { YandexDevice } from '../../types/index';
-import { getIconForDevice, localizeUnit, isCameraDevice, isAlwaysOnDevice, formatFloatValue } from '../../constants';
+import { getIconForDevice, localizeUnit, isCameraDevice, isAlwaysOnDevice, formatFloatValue, isCameraPrivacyModeEnabled } from '../../constants';
 import { Loader2, Star, Settings, Eye, EyeOff, Video, Mic, MicOff, Thermometer, Droplets } from 'lucide-react';
 import { SensorDisplayConfig } from '../modals/SensorSettingsModal';
+import { debugLog } from '../../utils/debugLog';
+
+const loggedCameraCardIds = new Set<string>();
 
 export interface DeviceCardProps {
   device: YandexDevice;
@@ -51,11 +54,29 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
     return type === 'devices.properties.float' && instance === 'humidity';
   }) as any | undefined;
 
+  // Mic badge only for explicit microphone / hardware-mute properties.
+  // Never treat `camera_sw_mute` as a mic — that capability is the privacy shutter.
+  const hwMuteProperty = (device.properties ?? []).find(prop => {
+    const anyProp = prop as any;
+    const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
+    return instance === 'camera_hw_mute';
+  }) as any | undefined;
+
   const microphoneProperty = (device.properties ?? []).find(prop => {
     const anyProp = prop as any;
     const instance: string | undefined = anyProp?.parameters?.instance ?? anyProp?.state?.instance;
-    return !!instance && (instance.includes('microphone') || instance.includes('mic') || instance.includes('mute'));
+    if (!instance) return false;
+    const id = instance.toLowerCase();
+    if (id === 'camera_hw_mute' || id === 'camera_sw_mute' || id.includes('camera_sw')) return false;
+    return id === 'microphone' || id === 'mic' || id.endsWith('_microphone') || id.endsWith('_mic')
+      || id.includes('microphone');
   }) as any | undefined;
+
+  // Privacy shutter lives on capabilities (camera_sw_mute), not the mic badge.
+  const privacyOn = isCamera && isCameraPrivacyModeEnabled(device);
+  const hwMuteValue = String(hwMuteProperty?.state?.value ?? '');
+  const isHwMuteOn = hwMuteValue.includes('enabled') && !hwMuteValue.includes('disabled');
+
 
   const temperatureValue: number | null = temperatureProperty?.state?.value ?? null;
   const temperatureUnit = temperatureProperty?.parameters?.unit
@@ -73,16 +94,41 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
 
   const isSensor = !isToggleable && !!sensorProperty;
 
-  const isMicrophoneSensor = isCamera && (!!microphoneProperty || isSensor);
-  const micState: string | undefined = microphoneProperty?.state?.value ?? sensorProperty?.state?.value;
-  const micInstance: string | undefined = (microphoneProperty || sensorProperty)?.parameters?.instance ?? (microphoneProperty || sensorProperty)?.state?.instance;
-  const isMuteType = !!micInstance && micInstance.includes('mute');
-  // Для mute-типов: mute enabled = микрофон ВЫКЛ, mute disabled = микрофон ВКЛ
-  // Для остальных: 'on'/'true' = микрофон ВКЛ
+  const showMicStatus = isCamera && (!!microphoneProperty || !!hwMuteProperty);
+  const micState: string | undefined = microphoneProperty?.state?.value;
+  const micInstance: string | undefined = microphoneProperty?.parameters?.instance ?? microphoneProperty?.state?.instance;
   const micStateStr = String(micState ?? '');
-  const isMicOn = isMuteType
-    ? micStateStr.includes('disabled') || micStateStr === 'off' || micStateStr === 'false'
-    : micStateStr === 'on' || micStateStr === 'true';
+  const isMicOn = hwMuteProperty
+    ? !isHwMuteOn
+    : micStateStr === 'on' || micStateStr === 'true' || micStateStr.includes('unmuted');
+  const micTitle = hwMuteProperty
+    ? (isHwMuteOn
+      ? 'Аппаратный микрофон выключен (кнопка на камере / настройки в приложении Дом)'
+      : 'Аппаратный микрофон включен')
+    : (isMicOn ? 'Микрофон включен' : 'Микрофон выключен');
+
+  if (isCamera && !loggedCameraCardIds.has(device.id)) {
+    loggedCameraCardIds.add(device.id);
+    debugLog('camera', 'device card status', {
+      id: device.id,
+      name: device.name,
+      propertyInstances: (device.properties ?? []).map((p: any) => ({
+        instance: p?.parameters?.instance ?? p?.state?.instance,
+        value: p?.state?.value,
+      })),
+      capabilityInstances: (device.capabilities ?? []).map((c: any) => ({
+        type: c?.type,
+        instance: c?.parameters?.instance ?? c?.state?.instance,
+        value: c?.state?.value,
+      })),
+      showMicStatus,
+      micInstance,
+      micState,
+      hwMute: hwMuteValue || null,
+      isHwMuteOn,
+      privacyOn,
+    });
+  }
 
   const sensorInstance: string | undefined = sensorProperty?.parameters?.instance ?? sensorProperty?.state?.instance;
   const rawSensorValue: unknown = sensorProperty?.state?.value;
@@ -139,10 +185,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
           <div className={`device-icon ${(isOn && isToggleable) || isCamera || isAlwaysOn ? 'is-on' : ''}`}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: 'w-4 h-4' })}
           </div>
-          {isMicrophoneSensor && (
+          {showMicStatus && (
             <span
               className="flex-shrink-0"
-              title={isMicOn ? 'Микрофон включен' : 'Микрофон выключен'}
+              title={micTitle}
             >
               {isMicOn
                 ? <Mic className="w-3.5 h-3.5 text-green-400 dark:text-green-300" />
@@ -203,7 +249,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onToggle, isFavo
         )}
       </div>
 
-      {isSensor && formattedSensorValue && !isMicrophoneSensor && (
+      {isSensor && formattedSensorValue && !showMicStatus && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 'auto' }}>
           <span className="device-sensor-value">{formattedSensorValue}</span>
         </div>

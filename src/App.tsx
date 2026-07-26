@@ -14,6 +14,7 @@ import DashboardContext from './contexts/DashboardContext';
 import { useNotification, useAuth, useFavorites, useNavigation, useUpdateNotification,
          useCameraAuth, useYandexData, useDeviceActions, useHousehold, useAutostart } from './hooks';
 import packageJson from '../package.json';
+import { debugLog, debugWarn, refreshDebugFlags } from './utils/debugLog';
 
 const yandexApi = window.api;
 
@@ -44,9 +45,23 @@ function App() {
     // 5. Зависит от showNotification
     const { isAutostartEnabled, handleToggleAutostart } = useAutostart(showNotification);
 
+    // Track AppState transitions — blank UI with only CSS background often means LOADING
+    // (bg-transparent) or AUTH after an unexpected re-init / session wipe.
+    const prevAppStateRef = React.useRef(appState);
+    useEffect(() => {
+        if (prevAppStateRef.current !== appState) {
+            debugLog('app', 'appState', prevAppStateRef.current, '→', appState, {
+                hasToken: Boolean(token),
+                hasUserData: Boolean(userData),
+            });
+            prevAppStateRef.current = appState;
+        }
+    }, [appState, token, userData]);
+
     // --- Колбэки для связывания хуков ---
 
     const handleLoadData = useCallback(async (apiToken: string) => {
+        debugLog('app', 'handleLoadData start');
         setAppState(AppState.LOADING);
         setErrorMsg(undefined);
         try {
@@ -55,7 +70,9 @@ function App() {
             setUserData(sortedData);
             setAppState(AppState.DASHBOARD);
             await promptXTokenIfNeeded(sortedData);
+            debugLog('app', 'handleLoadData ok', { devices: sortedData.devices?.length });
         } catch (err) {
+            debugWarn('app', 'handleLoadData failed', err);
             setErrorMsg(cleanErrorMessage(err));
             setAppState(AppState.AUTH);
             if (err instanceof Error && (err.message.includes('401') || err.message.includes('403'))) {
@@ -65,6 +82,11 @@ function App() {
         }
     }, [setUserData, setAppState, setErrorMsg, setToken, promptXTokenIfNeeded]);
 
+    const handleLoadDataRef = React.useRef(handleLoadData);
+    useEffect(() => {
+        handleLoadDataRef.current = handleLoadData;
+    }, [handleLoadData]);
+
     const handleTokenSubmit = useCallback(async (newToken: string) => {
         setToken(newToken);
         await yandexApi.setSecureToken(newToken);
@@ -72,6 +94,7 @@ function App() {
     }, [setToken, handleLoadData]);
 
     const handleLogout = useCallback(async () => {
+        debugLog('app', 'logout');
         await yandexApi.deleteSecureToken();
         setToken(null);
         setUserData(null);
@@ -80,6 +103,7 @@ function App() {
     }, [setToken, setUserData, setErrorMsg, setAppState]);
 
     const handleCancelRetry = useCallback(async () => {
+        debugLog('app', 'cancel retry');
         await yandexApi.deleteSecureToken();
         setToken(null);
         setUserData(null);
@@ -88,20 +112,25 @@ function App() {
     }, [setToken, setUserData, setErrorMsg, setAppState]);
 
     // --- 1. Init-эффект (проверка токена при запуске) ---
+    // Intentionally empty deps: must run once. Re-running on handleLoadData identity
+    // would set AppState.LOADING and wipe the dashboard (transparent bg = "only background").
     useEffect(() => {
+        refreshDebugFlags();
+        debugLog('app', 'init: checkToken');
         const checkToken = async () => {
             setAppState(AppState.LOADING);
             const storedToken = await yandexApi.getSecureToken();
             if (storedToken) {
                 setToken(storedToken);
-                await handleLoadData(storedToken);
+                await handleLoadDataRef.current(storedToken);
             } else {
                 setErrorMsg(undefined);
                 setAppState(AppState.AUTH);
             }
         };
-        checkToken();
-    }, [handleLoadData]);
+        void checkToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // --- 2. Вспомогательная функция для подготовки данных для трея ---
     const getTrayMenuItems = useCallback((

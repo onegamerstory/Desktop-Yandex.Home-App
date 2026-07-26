@@ -251,11 +251,31 @@ function createWindow () {
      if (isDev) {
         mainWindow.setTitle('[DEV] Yandex Smart Home Control');
         mainWindow.loadURL(DEV_VITE_URL);
+        mainWindow.webContents.openDevTools({ mode: 'detach' });
         mainWindow.webContents.on('console-message', (_event, level, message) => {
-            if (message.includes('[Goloom]') || message.includes('[Camera]')) {
+            const interesting =
+                message.includes('[Goloom]')
+                || message.includes('[Camera]')
+                || message.includes('[Debug:')
+                || message.includes('InvalidStateError')
+                || message.includes('MediaElementSource')
+                || message.includes('createMediaElementSource');
+            if (interesting) {
                 const prefix = level === 3 ? '[Renderer:ERR]' : '[Renderer]';
                 console.log(prefix, message);
             }
+        });
+        mainWindow.webContents.on('render-process-gone', (_event, details) => {
+            console.error('[Electron] render-process-gone', details);
+        });
+        mainWindow.webContents.on('unresponsive', () => {
+            console.error('[Electron] webContents unresponsive');
+        });
+        mainWindow.webContents.on('did-fail-load', (_event, code, desc, url) => {
+            console.error('[Electron] did-fail-load', { code, desc, url });
+        });
+        mainWindow.webContents.on('did-finish-load', () => {
+            console.log('[Electron] did-finish-load');
         });
      } else {
         mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));

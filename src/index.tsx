@@ -2,6 +2,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { debugError, debugLog, refreshDebugFlags } from './utils/debugLog';
+
+refreshDebugFlags();
+debugLog('react', 'renderer boot', { href: window.location.href });
+
+window.addEventListener('error', (event) => {
+  debugError('react', 'window.error', event.message, event.filename, event.lineno, event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  debugError('react', 'unhandledrejection', event.reason);
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -14,3 +26,7 @@ root.render(
     <App />
   // </React.StrictMode>
 );
+
+debugLog('react', 'root.render called', {
+  rootChildren: rootElement.childElementCount,
+});

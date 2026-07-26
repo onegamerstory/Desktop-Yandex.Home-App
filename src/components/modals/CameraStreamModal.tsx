@@ -12,6 +12,7 @@ import {
   getCameraPrivacyInstance,
 } from '../../constants';
 import { attachVideoAudioBoost, VideoAudioBoost } from '../../utils/videoAudioBoost';
+import { debugLog, debugWarn } from '../../utils/debugLog';
 import { X, RefreshCw, Loader2, Video, AlertCircle, Eye, EyeOff, Maximize2, Settings2, PictureInPicture2 } from 'lucide-react';
 
 const QUALITY_PRESETS = [
@@ -167,8 +168,13 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
 
   const cleanupPlayer = useCallback(() => {
     abortStreamSession();
-    audioBoostRef.current?.release();
-    audioBoostRef.current = null;
+    if (audioBoostRef.current) {
+      debugLog('camera', 'cleanupPlayer releaseVideoAudioBoost', {
+        contextState: audioBoostRef.current.contextState,
+      });
+      audioBoostRef.current.release();
+      audioBoostRef.current = null;
+    }
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -605,22 +611,80 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
   }, []);
 
   // Boost Yandex camera audio above the HTMLMediaElement 1.0 volume cap (mics are often quiet).
+  // Do NOT depend on cameraDevice — privacy polls refresh it every ~20s and would re-run
+  // this effect; tearing down MediaElementSource then re-attaching throws InvalidStateError
+  // and can unmount the entire React tree (blank app, only CSS background left).
+  //
+  // CRITICAL: createMediaElementSource must run AFTER the element has a MediaStream.
+  // Attaching on an empty <video> and then switching srcObject (Goloom combined stream)
+  // often yields silent playback in Chromium/Electron even though the audio track is live.
   useEffect(() => {
     if (!isOpen || !streamProtocol) return;
     const video = videoRef.current;
     if (!video) return;
+    if (!isYandexCameraDevice(cameraDeviceRef.current)) return;
 
-    video.muted = false;
-    video.volume = 1;
-    if (isYandexCameraDevice(cameraDevice)) {
-      audioBoostRef.current = attachVideoAudioBoost(video);
+    const applyBoost = (reason: string) => {
+      const stream = video.srcObject;
+      if (stream instanceof MediaStream) {
+        const liveAudio = stream.getAudioTracks().filter((t) => t.readyState === 'live');
+        if (liveAudio.length === 0) {
+          debugLog('camera', 'skip attachVideoAudioBoost — waiting for audio track', {
+            reason,
+            videoTracks: stream.getVideoTracks().length,
+          });
+          return;
+        }
+      } else if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        debugLog('camera', 'skip attachVideoAudioBoost — no media yet', {
+          reason,
+          readyState: video.readyState,
+        });
+        return;
+      }
+
+      video.muted = false;
+      video.volume = 1;
+      try {
+        const boost = attachVideoAudioBoost(video);
+        audioBoostRef.current = boost;
+        debugLog('camera', 'attachVideoAudioBoost', {
+          reason,
+          streamProtocol,
+          videoWidth: video.videoWidth,
+          contextState: boost.contextState,
+          paused: video.paused,
+          audioTracks: stream instanceof MediaStream
+            ? stream.getAudioTracks().map((t) => ({
+              id: t.id,
+              enabled: t.enabled,
+              muted: t.muted,
+              readyState: t.readyState,
+            }))
+            : null,
+        });
+        boost.resume();
+      } catch (err) {
+        debugWarn('camera', 'attachVideoAudioBoost failed', err);
+      }
+    };
+
+    const onPlaying = () => applyBoost('playing');
+    video.addEventListener('playing', onPlaying);
+    // If playback already started before this effect ran, attach immediately.
+    if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      applyBoost('effect-already-playing');
     }
 
     return () => {
+      video.removeEventListener('playing', onPlaying);
+      debugLog('camera', 'releaseVideoAudioBoost', {
+        contextState: audioBoostRef.current?.contextState,
+      });
       audioBoostRef.current?.release();
       audioBoostRef.current = null;
     };
-  }, [isOpen, streamProtocol, cameraDevice]);
+  }, [isOpen, streamProtocol]);
 
   // Hide freeze-frame overlay once the live stream resumes
   useEffect(() => {
@@ -726,6 +790,7 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
   }, [privacyEnabled, streamProtocol, isLoading, isOpen, cleanupPlayer]);
 
   useEffect(() => {
+    debugLog('camera', 'modal isOpen effect', { isOpen, deviceId: device.id, session: sessionRef.current });
     if (!isOpen) {
       cleanupPlayer();
       setError(null);
@@ -760,13 +825,28 @@ export const CameraStreamModal: React.FC<CameraStreamModalProps> = ({
     void openStream();
 
     return () => {
+      debugLog('camera', 'modal isOpen cleanup', { deviceId: device.id });
       cleanupPlayer();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Final safety net when Dashboard unmounts the modal entirely
-  useEffect(() => () => { cleanupPlayer(); }, [cleanupPlayer]);
+  useEffect(() => () => {
+    debugLog('camera', 'modal unmount cleanupPlayer');
+    cleanupPlayer();
+  }, [cleanupPlayer]);
+
+  useEffect(() => {
+    debugLog('camera', 'ui state', {
+      isOpen,
+      streamProtocol,
+      isLoading,
+      privacyEnabled,
+      hasError: Boolean(error),
+      session: sessionRef.current,
+    });
+  }, [isOpen, streamProtocol, isLoading, privacyEnabled, error]);
 
   if (!isOpen) {
     return null;
