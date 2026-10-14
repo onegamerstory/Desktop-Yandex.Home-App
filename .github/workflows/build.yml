@@ -78,7 +78,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         
       # ----------------------------------------------------------------------
-      # Загрузка артефактов
+      # Загрузка артефактов (для job release ниже)
       # ----------------------------------------------------------------------
       - name: Upload Artifacts (Windows, Mac, Linux)
         uses: actions/upload-artifact@v4
@@ -88,3 +88,36 @@ jobs:
           # Папка, указанная в вашем package.json
           path: release/
           retention-days: 7
+
+  # После сборки на всех ОС — создаём GitHub Release и прикрепляем установщики.
+  # Ручной "Create release" из тега даёт только source zip/tar — без этого job.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

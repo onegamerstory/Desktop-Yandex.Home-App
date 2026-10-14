@@ -14,20 +14,41 @@ const extractCsrfToken = (html) => {
     return match?.[1] ?? null;
 };
 
+/** Browser-like UA — some Yandex edges reset bare Node/Electron undici clients. */
+const BROWSER_UA =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+/**
+ * CSRF / session pages used to live at /quasar; Yandex moved them to /iot.
+ * /quasar now returns empty reply / UND_ERR_SOCKET from many networks (camera
+ * connects from mobile app which never hits that page).
+ */
+const QUASAR_STORAGE_URL = 'https://yandex.ru/iot?storage=1';
+const QUASAR_CSRF_URL = 'https://yandex.ru/iot';
+
+const drainBody = async (response) => {
+    try {
+        await response.arrayBuffer();
+    } catch {
+        /* ignore */
+    }
+};
+
 const getQuasarSession = async (xToken) => {
-    if (sessionCache.has(xToken)) {
-        return sessionCache.get(xToken);
+    const trimmedToken = xToken.trim();
+    if (sessionCache.has(trimmedToken)) {
+        return sessionCache.get(trimmedToken);
     }
 
     const jar = new CookieJar();
     const quasarFetch = fetchCookie(fetch, jar);
-    const trimmedToken = xToken.trim();
 
     const authResponse = await fetch('https://mobileproxy.passport.yandex.net/1/bundle/auth/x_token/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Ya-Consumer-Authorization': `OAuth ${trimmedToken}`,
+            'User-Agent': BROWSER_UA,
         },
         body: 'type=x-token&retpath=https%3A%2F%2Fwww.yandex.ru',
     });
@@ -46,21 +67,34 @@ const getQuasarSession = async (xToken) => {
 
     const sessionResponse = await quasarFetch(`${passportHost}/auth/session/?track_id=${trackId}`, {
         redirect: 'manual',
+        headers: { 'User-Agent': BROWSER_UA },
     });
 
     const location = sessionResponse.headers.get('location') || '';
+    // Avoid undici keep-alive reuse of a connection with an unread redirect body.
+    await drainBody(sessionResponse);
     if (!location.includes('/auth/finish')) {
         throw new Error('Quasar auth: не удалось установить сессию passport');
     }
 
-    const storageResponse = await quasarFetch('https://yandex.ru/quasar?storage=1');
+    const storageResponse = await quasarFetch(QUASAR_STORAGE_URL, {
+        headers: {
+            'User-Agent': BROWSER_UA,
+            Accept: 'application/json,text/plain,*/*',
+        },
+    });
     const storage = await storageResponse.json();
     const uid = storage?.storage?.user?.uid;
     if (!uid) {
         throw new Error('Quasar auth: сессия не подтверждена (нет uid)');
     }
 
-    const quasarPage = await quasarFetch('https://yandex.ru/quasar');
+    const quasarPage = await quasarFetch(QUASAR_CSRF_URL, {
+        headers: {
+            'User-Agent': BROWSER_UA,
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+    });
     const html = await quasarPage.text();
     const csrf = extractCsrfToken(html);
 
@@ -74,7 +108,12 @@ const getQuasarSession = async (xToken) => {
 };
 
 const refreshCsrf = async (session) => {
-    const quasarPage = await session.fetch('https://yandex.ru/quasar');
+    const quasarPage = await session.fetch(QUASAR_CSRF_URL, {
+        headers: {
+            'User-Agent': BROWSER_UA,
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+    });
     const html = await quasarPage.text();
     const csrf = extractCsrfToken(html);
     if (!csrf) {
