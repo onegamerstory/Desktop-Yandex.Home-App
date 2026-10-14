@@ -15,8 +15,21 @@ jobs:
       
     # Используем матрицу, чтобы запустить одни и те же шаги на разных ОС
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          - os: macos-15-intel
+            name: macos-x64
+            build_args: --mac dmg --x64
+          - os: macos-14
+            name: macos-arm64
+            build_args: --mac dmg --arm64
+          - os: ubuntu-latest
+            name: linux
+            build_args: --linux
+          - os: windows-latest
+            name: windows
+            build_args: --win
     
     runs-on: ${{ matrix.os }}
     
@@ -34,9 +47,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-${{ matrix.name }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-${{ matrix.name }}-node-
             
       # ----------------------------------------------------------------------
       # Установка в два этапа для стабильности
@@ -55,7 +68,10 @@ jobs:
       - name: Build Electron App (Dist)
         # Используем "--publish never", чтобы полностью отключить публикацию electron-builder 
         # Флаг "--" необходим для передачи аргументов в скрипт npm.
-        run: npm run dist -- --publish never
+        run: npm run build
+
+      - name: Build Electron App Installer
+        run: npx electron-builder ${{ matrix.build_args }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Отключает автопоиск сертификатов для подписи, который не нужен в CI.
@@ -68,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # Используем имя файла, соответствующее ОС для легкой идентификации
-          name: ${{ matrix.os }}-build-artifacts
+          name: ${{ matrix.name }}-build-artifacts
           # Папка, указанная в вашем package.json
           path: release/
           retention-days: 7

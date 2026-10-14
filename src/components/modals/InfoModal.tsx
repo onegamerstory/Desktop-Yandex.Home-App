@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
+import { ToggleSwitch } from '../ToggleSwitch';
+import { getCheckUpdatesOnStartup, setCheckUpdatesOnStartup } from '../../utils/updateSettings';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -19,6 +21,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, currentVe
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
+  const [checkOnStartup, setCheckOnStartup] = useState(getCheckUpdatesOnStartup);
 
   const compareVersions = (v1: string, v2: string): number => {
     const parts1 = v1.replace(/^v/, '').split('.').map(Number);
@@ -59,6 +62,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, currentVe
       checkForUpdates();
     }
   }, [isOpen, hasChecked]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCheckOnStartup(getCheckUpdatesOnStartup());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -140,6 +149,17 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, currentVe
                 Проверить обновление
               </button>
             )}
+          </div>
+
+          <div className="bg-gray-100 dark:bg-surface-warm rounded-lg p-4">
+            <ToggleSwitch
+              checked={checkOnStartup}
+              onChange={(enabled) => {
+                setCheckOnStartup(enabled);
+                setCheckUpdatesOnStartup(enabled);
+              }}
+              label="Проверять наличие обновлений при запуске"
+            />
           </div>
         </div>
 

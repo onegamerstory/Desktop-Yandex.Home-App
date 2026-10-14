@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Download } from 'lucide-react';
+import { ToggleSwitch } from '../ToggleSwitch';
+import { getCheckUpdatesOnStartup, setCheckUpdatesOnStartup } from '../../utils/updateSettings';
 
 interface UpdateNotificationModalProps {
   isOpen: boolean;
@@ -18,6 +20,8 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
   releaseUrl,
   releaseDate,
 }) => {
+  const [checkOnStartup, setCheckOnStartup] = useState(getCheckUpdatesOnStartup);
+
   if (!isOpen) return null;
 
   return (
@@ -63,6 +67,17 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
             <p className="text-sm text-yellow-900 dark:text-yellow-400">
               Доступна новая версия приложения. Рекомендуется обновиться для получения последних функций и исправлений ошибок.
             </p>
+          </div>
+
+          <div className="bg-gray-100 dark:bg-surface-warm rounded-lg p-4">
+            <ToggleSwitch
+              checked={checkOnStartup}
+              onChange={(enabled) => {
+                setCheckOnStartup(enabled);
+                setCheckUpdatesOnStartup(enabled);
+              }}
+              label="Проверять наличие обновлений при запуске"
+            />
           </div>
         </div>
 

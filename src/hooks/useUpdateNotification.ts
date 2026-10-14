@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { compareVersions } from '../utils/dataUtils';
+import { getCheckUpdatesOnStartup } from '../utils/updateSettings';
 import packageJson from '../../package.json';
 
 interface UpdateInfo {
@@ -45,6 +46,10 @@ export function useUpdateNotification(): UseUpdateNotificationReturn {
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
     useEffect(() => {
+        if (!getCheckUpdatesOnStartup()) {
+            return;
+        }
+
         checkForUpdates().then(newUpdateInfo => {
             if (newUpdateInfo) {
                 setUpdateInfo(newUpdateInfo);
