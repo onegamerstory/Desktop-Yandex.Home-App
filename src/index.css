@@ -53,53 +53,53 @@
 }
 
 [data-theme="dark"] {
-  /* App background - сплошной цвет вместо градиента */
-  --app-bg: #121519;
+  /* Dark graphite surfaces with Alice-inspired violet accents */
+  --app-bg: #17161c;
 
   /* Sidebar */
-  --sidebar-bg: #17191d;
+  --sidebar-bg: #1d1c23;
 
   /* Cards */
-  --card-bg: #1f2125;
-  --card-fg: #ffffff;
-  --card-bg-active: #ffffff;
-  --card-fg-active: #000000;
+  --card-bg: #24232b;
+  --card-fg: #f4f1f8;
+  --card-bg-active: #302a3a;
+  --card-fg-active: #f8f4ff;
 
   /* Groups */
-  --group-bg: #191b1f;
+  --group-bg: #201f26;
 
   /* Accent */
-  --accent: #ea8411;
+  --accent: #8b5cf6;
   --accent-on: #ffffff;
-  --accent-hover: #d6750f;
-  --accent-active: #c0680d;
+  --accent-hover: #7c3aed;
+  --accent-active: #6d28d9;
 
   /* Background / Surface (общие) */
-  --bg: #121519;
-  --surface: #1f2125;
-  --surface-warm: #191b1f;
+  --bg: #17161c;
+  --surface: #24232b;
+  --surface-warm: #201f26;
 
   /* Text */
-  --fg: #f5f5f7;
-  --fg-2: #a1a1a6;
-  --muted: #8e8e93;
-  --meta: #98989d;
+  --fg: #f4f1f8;
+  --fg-2: #b9b4c2;
+  --muted: #9993a3;
+  --meta: #a7a1b0;
 
   /* Borders */
-  --border: #2c2c2e;
-  --border-soft: #1f2125;
+  --border: #393640;
+  --border-soft: #302e37;
 
   /* Semantic */
   --success: #30d158;
   --warn: #ffd60a;
   --danger: #ff453a;
   --toggle-on: #30d158;
-  --fav-star: #ea8411;
+  --fav-star: #b69aff;
 
   /* Elevation */
   --elev-raised: 0 12px 32px rgba(0, 0, 0, 0.6);
 
-  /* Focus ring with new accent */
+  /* Focus ring follows the dark theme accent */
   --focus-ring: 0 0 0 4px color-mix(in oklab, var(--accent) 25%, transparent);
 }
 
@@ -272,6 +272,18 @@ body {
 .content-actions .header-btn.active {
   background: var(--card-bg-active);
   color: var(--card-fg-active);
+}
+
+[data-theme="dark"] .content-actions .header-btn.active {
+  background: var(--accent);
+  color: var(--accent-on);
+  opacity: 1;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 75%, white),
+    0 0 14px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+[data-theme="dark"] .content-actions .header-btn.active:hover {
+  background: var(--accent-hover);
 }
 
 .content-actions .header-btn:disabled {
@@ -514,6 +526,7 @@ body {
 
 [data-theme="dark"] .device-card.is-on {
   border-color: var(--border-soft);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
 }
 
 .device-card.is-on .device-name {
