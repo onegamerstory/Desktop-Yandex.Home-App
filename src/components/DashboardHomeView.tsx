@@ -6,7 +6,7 @@ import { DeviceCardAdapter } from './cards/DeviceCardAdapter';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { UseDashboardStateReturn } from '../hooks/useDashboardState';
 import { isLightGroup, isSensorDevice } from '../constants';
-import { Building2, SquareSquare, ScrollText, Lightbulb, Star, ChevronRight, ChevronDown } from 'lucide-react';
+import { Building2, SquareSquare, ScrollText, Lightbulb, Star, ChevronRight, ChevronDown, Image as ImageIcon } from 'lucide-react';
 
 interface DashboardHomeViewProps {
     state: UseDashboardStateReturn;
@@ -26,6 +26,7 @@ interface DashboardHomeViewProps {
     visibleFavoriteGroups: YandexGroup[];
     hasFavorites: boolean;
     hasFavoriteSensors: boolean;
+    onOpenBackgroundSettings: (roomId: string) => void;
 }
 
 export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
@@ -46,6 +47,7 @@ export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
     visibleFavoriteGroups,
     hasFavorites,
     hasFavoriteSensors,
+    onOpenBackgroundSettings,
 }) => {
     const ctx = useDashboardContext();
 
@@ -198,6 +200,18 @@ export const DashboardHomeView: React.FC<DashboardHomeViewProps> = ({
                             {isRoomCollapsed ? <ChevronRight className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} />}
                             <h2>{room.name}</h2>
                             <span className="room-count">{roomDevices.length}</span>
+                            <button
+                                type="button"
+                                className="header-btn room-background-settings"
+                                title={`Настроить фон: ${room.name}`}
+                                aria-label={`Настроить фон: ${room.name}`}
+                                onClick={event => {
+                                    event.stopPropagation();
+                                    onOpenBackgroundSettings(room.id);
+                                }}
+                            >
+                                <ImageIcon className="w-4 h-4" />
+                            </button>
                         </div>
                         {!isRoomCollapsed && (
                             <>

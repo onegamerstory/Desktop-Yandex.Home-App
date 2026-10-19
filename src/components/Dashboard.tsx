@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import { YandexScenario } from '../types/index';
 import { Sidebar } from './Sidebar';
 import { DashboardHomeView } from './DashboardHomeView';
@@ -13,18 +13,43 @@ import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
 import { CameraStreamModal } from './modals/CameraStreamModal';
 import { SensorSettingsModal } from './modals/SensorSettingsModal';
 import { InfoModal } from './modals/InfoModal';
-import { Pencil, Power, Sun, Moon, RefreshCw, Info, LogOut, X } from 'lucide-react';
+import { Pencil, Power, Sun, Moon, RefreshCw, Info, LogOut, X, Image as ImageIcon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { useDashboardState } from '../hooks/useDashboardState';
 import { isLightDevice, isLightGroup, isCameraDevice, isSensorDevice } from '../constants';
 import packageJson from '../../package.json';
+import { BackgroundSettingsModal, DEFAULT_BACKGROUND_SETTINGS } from './modals/BackgroundSettingsModal';
+import type { BackgroundSettings } from './modals/BackgroundSettingsModal';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
+
+const parseBackgroundSettings = (stored: string | null): BackgroundSettings => {
+    if (!stored) return DEFAULT_BACKGROUND_SETTINGS;
+    const parsed = JSON.parse(stored) as Partial<BackgroundSettings>;
+    const clamp = (value: number | undefined, min: number, max: number, fallback: number) =>
+        typeof value === 'number' && Number.isFinite(value)
+            ? Math.min(max, Math.max(min, value))
+            : fallback;
+
+    return {
+        image: typeof parsed.image === 'string' ? parsed.image : '',
+        positionX: clamp(parsed.positionX, 0, 100, DEFAULT_BACKGROUND_SETTINGS.positionX),
+        positionY: clamp(parsed.positionY, 0, 100, DEFAULT_BACKGROUND_SETTINGS.positionY),
+        zoom: clamp(parsed.zoom, 100, 200, DEFAULT_BACKGROUND_SETTINGS.zoom),
+        blur: clamp(parsed.blur, 0, 20, DEFAULT_BACKGROUND_SETTINGS.blur),
+        dim: clamp(parsed.dim, 0, 80, DEFAULT_BACKGROUND_SETTINGS.dim),
+    };
+};
 
 export const Dashboard: React.FC = () => {
     const ctx = useDashboardContext();
     const { theme, toggleTheme } = useTheme();
+    const [isBackgroundSettingsOpen, setIsBackgroundSettingsOpen] = useState(false);
+    const [backgroundSettings, setBackgroundSettings] = useState<BackgroundSettings>(DEFAULT_BACKGROUND_SETTINGS);
+    const [editingBackgroundSettings, setEditingBackgroundSettings] = useState<BackgroundSettings>(DEFAULT_BACKGROUND_SETTINGS);
+    const [backgroundRoomId, setBackgroundRoomId] = useState<string | null>(null);
+    const [editingBackgroundKey, setEditingBackgroundKey] = useState<string | null>(null);
 
     const state = useDashboardState(
         ctx.activeHouseholdId,
@@ -48,11 +73,79 @@ export const Dashboard: React.FC = () => {
 
     const homeName = currentHousehold?.name || DEFAULT_HOME_NAME;
     const hasMultipleHomes = (ctx.households?.length || 0) > 1;
-
     const roomsForHome = useMemo(() => {
         if (!currentHousehold) return ctx.data.rooms;
         return ctx.data.rooms.filter(room => room.household_id === currentHousehold.id);
     }, [ctx.data.rooms, currentHousehold]);
+
+    const backgroundTarget = useMemo(() => {
+        const householdKey = ctx.activeHouseholdId || 'default';
+        if (ctx.activeSidebarView === 'room' && ctx.activeRoomId) {
+            const room = roomsForHome.find(item => item.id === ctx.activeRoomId);
+            if (room) {
+                return {
+                    key: `dashboard:background:household:${householdKey}:room:${room.id}`,
+                    title: room.name,
+                    roomId: room.id,
+                };
+            }
+        }
+        if (ctx.activeSidebarView === 'home') {
+            return {
+                key: `dashboard:background:household:${householdKey}:home`,
+                title: homeName,
+                roomId: null,
+            };
+        }
+        return null;
+    }, [ctx.activeHouseholdId, ctx.activeSidebarView, ctx.activeRoomId, roomsForHome, homeName]);
+
+    useEffect(() => {
+        if (!backgroundTarget) {
+            setBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS);
+            return;
+        }
+        try {
+            setBackgroundSettings(parseBackgroundSettings(localStorage.getItem(backgroundTarget.key)));
+        } catch (error) {
+            console.error('Failed to load background settings', error);
+            setBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS);
+        }
+    }, [backgroundTarget]);
+
+    const openBackgroundSettings = (roomId: string | null = null) => {
+        if (roomId) {
+            setBackgroundRoomId(roomId);
+            const room = roomsForHome.find(item => item.id === roomId);
+            const key = `dashboard:background:household:${ctx.activeHouseholdId || 'default'}:room:${roomId}`;
+            if (!room) return;
+            setEditingBackgroundKey(key);
+            try {
+                setEditingBackgroundSettings(parseBackgroundSettings(localStorage.getItem(key)));
+            } catch (error) {
+                console.error('Failed to load room background settings', error);
+                setEditingBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS);
+            }
+        } else {
+            if (!backgroundTarget) return;
+            setBackgroundRoomId(backgroundTarget.roomId);
+            setEditingBackgroundKey(backgroundTarget.key);
+            try {
+                setEditingBackgroundSettings(parseBackgroundSettings(localStorage.getItem(backgroundTarget.key)));
+            } catch (error) {
+                console.error('Failed to load background settings', error);
+                setEditingBackgroundSettings(DEFAULT_BACKGROUND_SETTINGS);
+            }
+        }
+        setIsBackgroundSettingsOpen(true);
+    };
+
+    const saveBackgroundSettings = (settings: BackgroundSettings) => {
+        const key = editingBackgroundKey;
+        if (!key) throw new Error('No background settings target is selected');
+        localStorage.setItem(key, JSON.stringify(settings));
+        if (backgroundTarget?.key === key) setBackgroundSettings(settings);
+    };
 
     const groupsForHome = useMemo(() => {
         if (!currentHousehold) return ctx.data.groups;
@@ -196,6 +289,7 @@ export const Dashboard: React.FC = () => {
                         visibleFavoriteGroups={visibleFavoriteGroups}
                         hasFavorites={hasFavorites}
                         hasFavoriteSensors={hasFavoriteSensors}
+                        onOpenBackgroundSettings={(roomId) => openBackgroundSettings(roomId)}
                     />
                 );
             case 'room':
@@ -237,6 +331,7 @@ export const Dashboard: React.FC = () => {
                         visibleFavoriteGroups={visibleFavoriteGroups}
                         hasFavorites={hasFavorites}
                         hasFavoriteSensors={hasFavoriteSensors}
+                        onOpenBackgroundSettings={(roomId) => openBackgroundSettings(roomId)}
                     />
                 );
         }
@@ -249,7 +344,20 @@ export const Dashboard: React.FC = () => {
                 <main className="content">
                     <div className="content-header">
                         <div>
-                            <h1>{contentTitle}</h1>
+                            <div className="content-title-row">
+                                <h1>{contentTitle}</h1>
+                                {backgroundTarget && (
+                                    <button
+                                        type="button"
+                                        className="header-btn title-background-settings"
+                                        title="Настроить фон"
+                                        aria-label="Настроить фон"
+                                        onClick={() => openBackgroundSettings()}
+                                    >
+                                        <ImageIcon className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
                             <div className="subtitle">{contentSubtitle}</div>
                         </div>
                         {ctx.activeSidebarView === 'home' && (
@@ -301,6 +409,20 @@ export const Dashboard: React.FC = () => {
                         )}
                     </div>
                     {renderContent()}
+                    {backgroundTarget && backgroundSettings.image && (
+                        <div className="content-background" aria-hidden="true">
+                            <img
+                                src={backgroundSettings.image}
+                                alt=""
+                                style={{
+                                    objectPosition: `${backgroundSettings.positionX}% ${backgroundSettings.positionY}%`,
+                                    transform: `scale(${backgroundSettings.zoom / 100})`,
+                                    filter: `blur(${backgroundSettings.blur}px)`,
+                                }}
+                            />
+                            <div style={{ backgroundColor: `rgba(0, 0, 0, ${backgroundSettings.dim / 100})` }} />
+                        </div>
+                    )}
                 </main>
             </div>
 
@@ -412,6 +534,17 @@ export const Dashboard: React.FC = () => {
                 onClose={() => state.setShowInfoModal(false)}
                 currentVersion={packageJson.version}
             />
+            {isBackgroundSettingsOpen && (
+                <BackgroundSettingsModal
+                    key={backgroundRoomId ?? backgroundTarget?.key ?? 'home'}
+                    title={backgroundRoomId
+                        ? roomsForHome.find(room => room.id === backgroundRoomId)?.name || 'Комната'
+                        : homeName}
+                    initialSettings={editingBackgroundSettings}
+                    onClose={() => setIsBackgroundSettingsOpen(false)}
+                    onSave={saveBackgroundSettings}
+                />
+            )}
         </div>
     );
 };

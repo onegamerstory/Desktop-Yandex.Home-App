@@ -60,13 +60,13 @@
   --sidebar-bg: #1d1c23;
 
   /* Cards */
-  --card-bg: #24232b;
+  --card-bg: rgba(36, 35, 43, 0.58);
   --card-fg: #f4f1f8;
   --card-bg-active: #302a3a;
   --card-fg-active: #f8f4ff;
 
   /* Groups */
-  --group-bg: #201f26;
+  --group-bg: rgba(32, 31, 38, 0.58);
 
   /* Accent */
   --accent: #8b5cf6;
@@ -239,6 +239,37 @@ body {
   overflow-y: auto;
   background: transparent;
   padding: 24px 28px;
+  position: relative;
+  isolation: isolate;
+}
+
+.content > :not(.content-background) {
+  position: relative;
+  z-index: 1;
+}
+
+.content-background {
+  position: fixed;
+  inset: 0 0 0 var(--sidebar-w);
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.content-background img,
+.content-background > div {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.content-background img {
+  object-fit: cover;
+}
+
+.content-background > div {
+  z-index: 1;
 }
 
 /* Content actions (header buttons) */
@@ -284,6 +315,14 @@ body {
 
 [data-theme="dark"] .content-actions .header-btn.active:hover {
   background: var(--accent-hover);
+}
+
+[data-theme="dark"] .dark\:bg-primary\/20 {
+  background-color: color-mix(in oklab, var(--accent) 12%, var(--surface));
+}
+
+[data-theme="dark"] .dark\:hover\:bg-primary\/20:hover {
+  background-color: color-mix(in oklab, var(--accent) 18%, var(--surface));
 }
 
 .content-actions .header-btn:disabled {
@@ -478,6 +517,41 @@ body {
   letter-spacing: -0.02em;
 }
 
+.content-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-background-settings,
+.room-background-settings {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  color: var(--card-fg);
+  background: color-mix(in oklab, var(--card-fg) 10%, transparent);
+  opacity: 0.75;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+}
+
+.title-background-settings:hover,
+.room-background-settings:hover {
+  opacity: 1;
+  background: color-mix(in oklab, var(--card-fg) 20%, transparent);
+}
+
+.title-background-settings svg,
+.room-background-settings svg {
+  width: 15px;
+  height: 15px;
+}
+
 .content-header .subtitle {
   font-size: 13px;
   color: var(--card-fg);
@@ -510,11 +584,18 @@ body {
   border-color: var(--border-soft);
 }
 
+[data-theme="dark"] .device-card:not(.is-on) {
+  background: rgba(36, 35, 43, 0.38);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
 .device-card:hover {
   background: color-mix(in oklab, var(--card-bg), white 6%);
 }
 
 [data-theme="dark"] .device-card:hover {
+  background: color-mix(in oklab, rgba(36, 35, 43, 0.38), white 6%);
   border-color: color-mix(in oklab, var(--border), white 15%);
 }
 
@@ -527,6 +608,8 @@ body {
 [data-theme="dark"] .device-card.is-on {
   border-color: var(--border-soft);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .device-card.is-on .device-name {
@@ -742,6 +825,10 @@ body {
   border-radius: 10px;
 }
 
+.room-background-settings {
+  margin-left: 2px;
+}
+
 /* Group wrapper */
 .group-wrapper {
   background: var(--group-bg);
@@ -755,6 +842,12 @@ body {
 
 [data-theme="dark"] .group-wrapper {
   border-color: var(--border-soft);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+[data-theme="dark"] .group-wrapper.is-on {
+  background: var(--card-bg-active);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -1057,4 +1150,233 @@ body {
   border-top: 1px solid var(--border);
   margin: 4px 0;
   opacity: 0.5;
+}
+
+.background-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.background-modal {
+  width: min(680px, 100%);
+  max-height: min(90vh, 820px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.background-modal-header,
+.background-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+}
+
+.background-modal-header {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.background-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.background-modal-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.background-modal-header .header-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--fg);
+  background: color-mix(in oklab, var(--fg) 8%, transparent);
+  cursor: pointer;
+}
+
+.background-modal-body {
+  overflow-y: auto;
+  padding: 18px 22px;
+}
+
+.background-preview {
+  position: relative;
+  height: 210px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--fg) 8%, transparent);
+}
+
+.background-preview > img,
+.background-preview > div:nth-child(2) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.background-preview > img {
+  object-fit: cover;
+}
+
+.background-preview > div:nth-child(2) {
+  z-index: 1;
+}
+
+.background-preview-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.background-preview-empty svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.7;
+}
+
+.background-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.background-upload-button,
+.background-remove-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  background: color-mix(in oklab, var(--fg) 5%, transparent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.background-upload-button input {
+  display: none;
+}
+
+.background-remove-button {
+  color: var(--danger);
+}
+
+.background-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin-top: 18px;
+}
+
+.background-setting {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.background-setting span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.background-setting strong {
+  color: var(--fg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.background-setting input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.background-modal-error {
+  margin: 14px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.background-modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-soft);
+}
+
+.background-cancel-button,
+.background-save-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.background-save-button {
+  color: var(--accent-on);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .background-modal-backdrop {
+    padding: 10px;
+  }
+
+  .background-modal-header,
+  .background-modal-body,
+  .background-modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .background-preview {
+    height: 170px;
+  }
+
+  .background-controls {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
