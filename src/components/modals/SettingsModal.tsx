@@ -81,7 +81,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (isOpen) {
       setCheckOnStartup(getCheckUpdatesOnStartup());
       setShortcuts(getDeviceShortcuts());
-      setActiveTab('updates');
       setRecordingShortcutId(null);
       setShortcutError(null);
     }
