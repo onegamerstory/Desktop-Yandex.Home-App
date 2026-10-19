@@ -11,6 +11,7 @@ import {
   Rotate3D,
   Pause,
 } from 'lucide-react';
+import { loadModalPreferences, saveModalPreferences } from '../../utils/modalPreferences';
 
 interface FanSettingsModalProps {
   device: YandexDevice;
@@ -25,9 +26,11 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
   onClose,
   onApply,
 }) => {
+  const preferencesKey = `dashboard:modal-preferences:fan:${device.id}`;
   const [fanSpeed, setFanSpeed] = useState<string>('');
   const [oscillation, setOscillation] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const isApplyingRef = React.useRef(false);
 
   // Получаем mode capability для скорости вентилятора
@@ -140,11 +143,25 @@ export const FanSettingsModal: React.FC<FanSettingsModalProps> = ({
 
   // Инициализация значений при открытии модального окна
   useEffect(() => {
-    if (isOpen) {
-      setFanSpeed(getCurrentFanSpeed());
-      setOscillation(getCurrentOscillation());
+    if (!isOpen) {
+      setPreferencesReady(false);
+      return;
     }
-  }, [isOpen, device]);
+    setPreferencesReady(false);
+    const saved = loadModalPreferences<{ fanSpeed: string; oscillation: boolean }>(preferencesKey);
+    setFanSpeed(
+      saved.fanSpeed && fanSpeedModes.some(mode => mode.value === saved.fanSpeed)
+        ? saved.fanSpeed
+        : getCurrentFanSpeed()
+    );
+    setOscillation(typeof saved.oscillation === 'boolean' ? saved.oscillation : getCurrentOscillation());
+    setPreferencesReady(true);
+  }, [isOpen, device, preferencesKey]);
+
+  useEffect(() => {
+    if (!isOpen || !preferencesReady) return;
+    saveModalPreferences(preferencesKey, { fanSpeed, oscillation });
+  }, [isOpen, preferencesReady, preferencesKey, fanSpeed, oscillation]);
 
   if (!isOpen) return null;
 

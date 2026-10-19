@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { YandexDevice, YandexCapability } from '../../types/index';
 import { X, Lightbulb, Palette, Thermometer } from 'lucide-react';
 import { hsvToRgb } from '../../utils/colorConverter';
+import { loadModalPreferences, saveModalPreferences } from '../../utils/modalPreferences';
+import { getTemperatureSliderColor } from '../../utils/temperatureColor';
 
 interface BrightnessSettingsModalProps {
   device: YandexDevice;
@@ -27,6 +29,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
   onClose,
   onApply,
 }) => {
+  const preferencesKey = `dashboard:modal-preferences:light:${device.id}`;
   const [brightness, setBrightness] = useState<number | null>(null);
   const [brightnessRange, setBrightnessRange] = useState<{ min: number; max: number; precision: number } | null>(null);
   const [temperature_k, setTemperature_k] = useState<number | null>(null);
@@ -34,6 +37,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
   const [selectedColor, setSelectedColor] = useState<ColorOption | null>(null);
   const [colorMode, setColorMode] = useState<'color' | 'temperature'>('color');
   const [isLoading, setIsLoading] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
 
   // Найти capability диапазона яркости
   const rangeCapability = device.capabilities.find(
@@ -87,13 +91,27 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
   ];
 
   useEffect(() => {
+    if (!isOpen) {
+      setPreferencesReady(false);
+      return;
+    }
+
+    setPreferencesReady(false);
+    const saved = loadModalPreferences<{
+      brightness: number | null;
+      temperature_k: number | null;
+      selectedColor: ColorOption | null;
+      colorMode: 'color' | 'temperature';
+    }>(preferencesKey);
+
     if (rangeCapability && rangeCapability.parameters && (rangeCapability.parameters as any).range) {
-      setBrightnessRange((rangeCapability.parameters as any).range);
-      if (rangeCapability.state && typeof rangeCapability.state.value === 'number') {
-        setBrightness(rangeCapability.state.value);
-      } else {
-        setBrightness((rangeCapability.parameters as any).range.min);
-      }
+      const range = (rangeCapability.parameters as any).range;
+      setBrightnessRange(range);
+      const current = rangeCapability.state && typeof rangeCapability.state.value === 'number'
+        ? rangeCapability.state.value
+        : range.min;
+      const value = typeof saved.brightness === 'number' ? saved.brightness : current;
+      setBrightness(Math.min(range.max, Math.max(range.min, value)));
     } else {
       setBrightnessRange(null);
       setBrightness(null);
@@ -102,17 +120,29 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
     if (temperatureCapability && temperatureCapability.parameters && (temperatureCapability.parameters as any).temperature_k) {
       const tempData = (temperatureCapability.parameters as any).temperature_k;
       setTemperatureKRange({ min: tempData.min, max: tempData.max, precision: tempData.precision || 100 });
-      if (temperatureCapability.state && typeof temperatureCapability.state.value === 'number') {
-        setTemperature_k(temperatureCapability.state.value);
-      } else {
-        setTemperature_k(tempData.min);
-      }
+      const current = temperatureCapability.state && typeof temperatureCapability.state.value === 'number'
+        ? temperatureCapability.state.value
+        : tempData.min;
+      const value = typeof saved.temperature_k === 'number' ? saved.temperature_k : current;
+      setTemperature_k(Math.min(tempData.max, Math.max(tempData.min, value)));
     } else {
       // Используем значения по умолчанию если capability не существует
       setTemperatureKRange({ min: 1500, max: 6500, precision: 100 });
-      setTemperature_k(4000);
+      setTemperature_k(typeof saved.temperature_k === 'number' ? Math.min(6500, Math.max(1500, saved.temperature_k)) : 4000);
     }
-  }, [rangeCapability, temperatureCapability, isOpen, device]);
+    setSelectedColor(
+      saved.selectedColor
+        ? colorOptions.find(color => color.name === saved.selectedColor?.name) ?? null
+        : null
+    );
+    setColorMode(saved.colorMode === 'temperature' ? 'temperature' : 'color');
+    setPreferencesReady(true);
+  }, [rangeCapability, temperatureCapability, isOpen, device, preferencesKey]);
+
+  useEffect(() => {
+    if (!isOpen || !preferencesReady) return;
+    saveModalPreferences(preferencesKey, { brightness, temperature_k, selectedColor, colorMode });
+  }, [isOpen, preferencesReady, preferencesKey, brightness, temperature_k, selectedColor, colorMode]);
 
   if (!isOpen) return null;
 
@@ -153,6 +183,11 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
     <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
       <style>{`
         /* Temperature slider gradient - left (cold) to right (warm) */
+        input[type="range"].temp-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+        }
         input[type="range"].temp-slider::-webkit-slider-runnable-track {
           background: linear-gradient(to right, #4299e1 0%, #63b3ed 50%, #ed8936 100%);
           height: 8px;
@@ -164,7 +199,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #fff;
+          background: var(--temperature-thumb-color, #fff);
           border: 2px solid #475569;
           cursor: pointer;
           margin-top: -4px;
@@ -180,7 +215,7 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #fff;
+          background: var(--temperature-thumb-color, #fff);
           cursor: pointer;
           border: 2px solid #475569;
           margin-top: -4px;
@@ -360,7 +395,14 @@ export const BrightnessSettingsModal: React.FC<BrightnessSettingsModalProps> = (
                   step={temperatureKRange.precision}
                   value={temperature_k ?? temperatureKRange.min}
                   onChange={e => setTemperature_k(Number(e.target.value))}
-                  className="flex-1 accent-orange-500 dark:accent-orange-400 temp-slider"
+                  className="flex-1 temp-slider"
+                  style={{
+                    '--temperature-thumb-color': getTemperatureSliderColor(
+                      temperature_k ?? temperatureKRange.min,
+                      temperatureKRange.min,
+                      temperatureKRange.max
+                    ),
+                  } as React.CSSProperties}
                 />
                 <div className="text-xs text-slate-600 dark:text-muted w-12 text-right">
                   Тепло

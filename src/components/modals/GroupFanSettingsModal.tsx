@@ -11,6 +11,7 @@ import {
   Pause,
   Rotate3D
 } from 'lucide-react';
+import { loadModalPreferences, saveModalPreferences } from '../../utils/modalPreferences';
 
 interface GroupFanSettingsModalProps {
   group: YandexGroup;
@@ -27,9 +28,11 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
   onClose,
   onApply,
 }) => {
+  const preferencesKey = `dashboard:modal-preferences:group-fan:${group.id}`;
   const [fanSpeed, setFanSpeed] = useState<string>('');
   const [oscillation, setOscillation] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const isApplyingRef = React.useRef(false);
 
   // Получаем устройства, относящиеся к этой группе
@@ -146,11 +149,25 @@ export const GroupFanSettingsModal: React.FC<GroupFanSettingsModalProps> = ({
 
   // Инициализация значений при открытии модального окна
   useEffect(() => {
-    if (isOpen) {
-      setFanSpeed(getCurrentFanSpeed());
-      setOscillation(getCurrentOscillation());
+    if (!isOpen) {
+      setPreferencesReady(false);
+      return;
     }
-  }, [isOpen, group]);
+    setPreferencesReady(false);
+    const saved = loadModalPreferences<{ fanSpeed: string; oscillation: boolean }>(preferencesKey);
+    setFanSpeed(
+      saved.fanSpeed && fanSpeedModes.some(mode => mode.value === saved.fanSpeed)
+        ? saved.fanSpeed
+        : getCurrentFanSpeed()
+    );
+    setOscillation(typeof saved.oscillation === 'boolean' ? saved.oscillation : getCurrentOscillation());
+    setPreferencesReady(true);
+  }, [isOpen, group, preferencesKey]);
+
+  useEffect(() => {
+    if (!isOpen || !preferencesReady) return;
+    saveModalPreferences(preferencesKey, { fanSpeed, oscillation });
+  }, [isOpen, preferencesReady, preferencesKey, fanSpeed, oscillation]);
 
   if (!isOpen) return null;
 

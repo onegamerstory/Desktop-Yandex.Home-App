@@ -17,6 +17,7 @@ import {
   MoveHorizontal,
   MoveVertical
 } from 'lucide-react';
+import { loadModalPreferences, saveModalPreferences } from '../../utils/modalPreferences';
 
 interface GroupThermostatSettingsModalProps {
   group: YandexGroup;
@@ -33,12 +34,14 @@ export const GroupThermostatSettingsModal: React.FC<GroupThermostatSettingsModal
   onClose,
   onApply,
 }) => {
+  const preferencesKey = `dashboard:modal-preferences:group-climate:${group.id}`;
   const [thermostatMode, setThermostatMode] = useState<string>('');
   const [swingMode, setSwingMode] = useState<string>('');
   const [fanSpeed, setFanSpeed] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [temperature, setTemperature] = useState<number | null>(null);
   const [temperatureRange, setTemperatureRange] = useState<{ min: number; max: number; precision: number } | null>(null);
+  const [preferencesReady, setPreferencesReady] = useState(false);
 
   // Получаем устройства, относящиеся к этой группе
   const groupDevices = devices.filter(d => group.devices.includes(d.id));
@@ -50,16 +53,23 @@ export const GroupThermostatSettingsModal: React.FC<GroupThermostatSettingsModal
   ) as YandexCapability & { parameters?: { instance: string; range: { min: number; max: number; precision: number } } };
 
   useEffect(() => {
+    if (!isOpen) {
+      setPreferencesReady(false);
+      return;
+    }
+    const saved = loadModalPreferences<{ temperature: number | null }>(preferencesKey);
     if (rangeCapability && rangeCapability.parameters && (rangeCapability.parameters as any).range) {
-      setTemperatureRange((rangeCapability.parameters as any).range);
+      const range = (rangeCapability.parameters as any).range;
+      setTemperatureRange(range);
       // Установить значение температуры на середину диапазона
-      const midValue = Math.round(((rangeCapability.parameters as any).range.min + (rangeCapability.parameters as any).range.max) / 2);
-      setTemperature(midValue);
+      const midValue = Math.round((range.min + range.max) / 2);
+      const value = typeof saved.temperature === 'number' ? saved.temperature : midValue;
+      setTemperature(Math.min(range.max, Math.max(range.min, value)));
     } else {
       setTemperatureRange(null);
       setTemperature(null);
     }
-  }, [rangeCapability, isOpen, group]);
+  }, [rangeCapability, isOpen, group, preferencesKey]);
 
   // Получаем mode capabilities из первого устройства
   const modeCapabilities = firstDevice?.capabilities.filter(
@@ -183,12 +193,30 @@ export const GroupThermostatSettingsModal: React.FC<GroupThermostatSettingsModal
 
   // Инициализация значений при открытии модального окна
   useEffect(() => {
-    if (isOpen) {
-      setThermostatMode(getCurrentValue('thermostat'));
-      setSwingMode(getCurrentValue('swing'));
-      setFanSpeed(getCurrentValue('fan_speed'));
+    if (!isOpen) {
+      setPreferencesReady(false);
+      return;
     }
-  }, [isOpen, group]);
+    setPreferencesReady(false);
+    const saved = loadModalPreferences<{
+      thermostatMode: string;
+      swingMode: string;
+      fanSpeed: string;
+      temperature: number | null;
+    }>(preferencesKey);
+    setThermostatMode(thermostatModes.some(mode => mode.value === saved.thermostatMode) ? saved.thermostatMode : getCurrentValue('thermostat'));
+    setSwingMode(swingModes.some(mode => mode.value === saved.swingMode) ? saved.swingMode : getCurrentValue('swing'));
+    setFanSpeed(fanSpeedModes.some(mode => mode.value === saved.fanSpeed) ? saved.fanSpeed : getCurrentValue('fan_speed'));
+    if (temperatureRange && typeof saved.temperature === 'number') {
+      setTemperature(Math.min(temperatureRange.max, Math.max(temperatureRange.min, saved.temperature)));
+    }
+    setPreferencesReady(true);
+  }, [isOpen, group, preferencesKey]);
+
+  useEffect(() => {
+    if (!isOpen || !preferencesReady) return;
+    saveModalPreferences(preferencesKey, { thermostatMode, swingMode, fanSpeed, temperature });
+  }, [isOpen, preferencesReady, preferencesKey, thermostatMode, swingMode, fanSpeed, temperature]);
 
   if (!isOpen) return null;
 

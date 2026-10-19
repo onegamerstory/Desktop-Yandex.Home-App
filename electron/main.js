@@ -1,6 +1,7 @@
 // main.js
 
 import { app, BrowserWindow, ipcMain, Menu, Tray, Notification, globalShortcut } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 // Импорт yandex-api.js
@@ -52,7 +53,49 @@ if (isDev) {
 let mainWindow = null;
 let appTray = null; // Переменная для хранения экземпляра Tray
 let favoritesData = []; // Данные избранных устройств/сценариев
+let isQuitting = false;
+const WINDOW_BOUNDS_FILE = 'window-bounds.json';
+let windowBoundsSaveTimer = null;
 const registeredShortcuts = new Map();
+
+const loadWindowSize = () => {
+    try {
+        const saved = JSON.parse(
+            fs.readFileSync(path.join(app.getPath('userData'), WINDOW_BOUNDS_FILE), 'utf8'),
+        );
+        if (
+            Number.isFinite(saved.width) &&
+            Number.isFinite(saved.height) &&
+            saved.width >= 400 &&
+            saved.height >= 300 &&
+            saved.width <= 10000 &&
+            saved.height <= 10000
+        ) {
+            return { width: saved.width, height: saved.height };
+        }
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.error('Не удалось загрузить размер окна', error);
+        }
+    }
+    return { width: 1024, height: 768 };
+};
+
+const saveWindowSize = (window) => {
+    if (!window || window.isDestroyed() || window.isMaximized() || window.isMinimized() || window.isFullScreen()) {
+        return;
+    }
+    const { width, height } = window.getBounds();
+    try {
+        fs.writeFileSync(
+            path.join(app.getPath('userData'), WINDOW_BOUNDS_FILE),
+            JSON.stringify({ width, height }),
+            'utf8',
+        );
+    } catch (error) {
+        console.error('Не удалось сохранить размер окна', error);
+    }
+};
 
 const toElectronAccelerator = (shortcut) => {
     const parts = shortcut.split('+');
@@ -238,9 +281,6 @@ function buildTrayMenu() {
         { 
             label: 'Выход', 
             click: () => {
-                if (mainWindow) {
-                    mainWindow.removeListener('close', minimizeToTray);
-                }
                 app.quit();
             }
         },
@@ -258,8 +298,7 @@ function updateTrayMenu() {
 
 function createWindow () {
     mainWindow = new BrowserWindow({
-        width: 1024,
-        height: 768,
+        ...loadWindowSize(),
         webPreferences: {
             nodeIntegration: false, 
             contextIsolation: true,
@@ -267,10 +306,29 @@ function createWindow () {
         }
     });
     
-    mainWindow.on('close', minimizeToTray);
+    mainWindow.on('resize', () => {
+        if (windowBoundsSaveTimer) clearTimeout(windowBoundsSaveTimer);
+        windowBoundsSaveTimer = setTimeout(() => {
+            windowBoundsSaveTimer = null;
+            saveWindowSize(mainWindow);
+        }, 300);
+    });
+
+    mainWindow.on('close', (event) => {
+        if (windowBoundsSaveTimer) {
+            clearTimeout(windowBoundsSaveTimer);
+            windowBoundsSaveTimer = null;
+        }
+        saveWindowSize(mainWindow);
+        if (!isQuitting) minimizeToTray(event);
+    });
     
     // Очищаем ссылку на окно при его закрытии
     mainWindow.on('closed', () => {
+        if (windowBoundsSaveTimer) {
+            clearTimeout(windowBoundsSaveTimer);
+            windowBoundsSaveTimer = null;
+        }
         mainWindow = null;
     });
     
@@ -645,6 +703,15 @@ if (!gotTheLock) {
                 app.quit();
             }
         }
+    });
+
+    app.on('before-quit', () => {
+        isQuitting = true;
+        if (windowBoundsSaveTimer) {
+            clearTimeout(windowBoundsSaveTimer);
+            windowBoundsSaveTimer = null;
+        }
+        saveWindowSize(mainWindow);
     });
 
     app.on('activate', () => {

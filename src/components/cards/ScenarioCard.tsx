@@ -37,7 +37,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onExecute,
     <button
       onClick={handleClick}
       disabled={loading}
-      className={`scenario-card ${loading ? 'opacity-80' : ''} ${justExecuted ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/10' : ''} ${isEditMode && iconHiddenState ? 'opacity-50 grayscale' : ''}`}
+      className={`scenario-card ${loading ? 'opacity-80' : ''} ${justExecuted ? 'scenario-card--executed' : ''} ${isEditMode && iconHiddenState ? 'opacity-50 grayscale' : ''}`}
       style={{ position: 'relative' }}
     >
       <div

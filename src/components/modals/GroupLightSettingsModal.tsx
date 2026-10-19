@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { YandexGroup, YandexDevice, YandexCapability } from '../../types/index';
 import { X, Lightbulb, Palette, Thermometer } from 'lucide-react';
 import { hsvToRgb } from '../../utils/colorConverter';
+import { loadModalPreferences, saveModalPreferences } from '../../utils/modalPreferences';
+import { getTemperatureSliderColor } from '../../utils/temperatureColor';
 
 interface GroupLightSettingsModalProps {
   group: YandexGroup;
@@ -29,6 +31,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
   onClose,
   onApply,
 }) => {
+  const preferencesKey = `dashboard:modal-preferences:group-light:${group.id}`;
   const [brightness, setBrightness] = useState<number | null>(null);
   const [brightnessRange, setBrightnessRange] = useState<{ min: number; max: number; precision: number } | null>(null);
   const [temperature_k, setTemperature_k] = useState<number | null>(null);
@@ -36,6 +39,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
   const [selectedColor, setSelectedColor] = useState<ColorOption | null>(null);
   const [colorMode, setColorMode] = useState<'color' | 'temperature'>('color');
   const [isLoading, setIsLoading] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
 
   // Получаем первое устройство группы для определения доступных свойств
   const groupDevices = devices.filter(d => group.devices.includes(d.id));
@@ -94,13 +98,25 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
 
   useEffect(() => {
     // Инициализация только при открытии модала
-    if (!isOpen) return;
+    if (!isOpen) {
+      setPreferencesReady(false);
+      return;
+    }
+
+    setPreferencesReady(false);
+    const saved = loadModalPreferences<{
+      brightness: number | null;
+      temperature_k: number | null;
+      selectedColor: ColorOption | null;
+      colorMode: 'color' | 'temperature';
+    }>(preferencesKey);
 
     if (rangeCapability && rangeCapability.parameters && (rangeCapability.parameters as any).range) {
-      setBrightnessRange((rangeCapability.parameters as any).range);
+      const range = (rangeCapability.parameters as any).range;
+      setBrightnessRange(range);
       // Инициализируем на середину диапазона вместо минимума
-      const midValue = Math.round(((rangeCapability.parameters as any).range.min + (rangeCapability.parameters as any).range.max) / 2);
-      setBrightness(midValue);
+      const midValue = Math.round((range.min + range.max) / 2);
+      setBrightness(typeof saved.brightness === 'number' ? Math.min(range.max, Math.max(range.min, saved.brightness)) : midValue);
     } else {
       setBrightnessRange(null);
       setBrightness(null);
@@ -111,13 +127,25 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
       setTemperatureKRange({ min: tempData.min, max: tempData.max, precision: tempData.precision || 100 });
       // Инициализируем на середину диапазона
       const midTemp = Math.round((tempData.min + tempData.max) / 2);
-      setTemperature_k(midTemp);
+      setTemperature_k(typeof saved.temperature_k === 'number' ? Math.min(tempData.max, Math.max(tempData.min, saved.temperature_k)) : midTemp);
     } else {
       // Используем значения по умолчанию если capability не существует
       setTemperatureKRange({ min: 1500, max: 6500, precision: 100 });
-      setTemperature_k(4000);
+      setTemperature_k(typeof saved.temperature_k === 'number' ? Math.min(6500, Math.max(1500, saved.temperature_k)) : 4000);
     }
-  }, [isOpen]);
+    setSelectedColor(
+      saved.selectedColor
+        ? colorOptions.find(color => color.name === saved.selectedColor?.name) ?? null
+        : null
+    );
+    setColorMode(saved.colorMode === 'temperature' ? 'temperature' : 'color');
+    setPreferencesReady(true);
+  }, [isOpen, preferencesKey]);
+
+  useEffect(() => {
+    if (!isOpen || !preferencesReady) return;
+    saveModalPreferences(preferencesKey, { brightness, temperature_k, selectedColor, colorMode });
+  }, [isOpen, preferencesReady, preferencesKey, brightness, temperature_k, selectedColor, colorMode]);
 
   if (!isOpen) return null;
 
@@ -158,6 +186,11 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
     <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-center justify-center backdrop-blur-sm">
       <style>{`
         /* Temperature slider gradient - left (cold) to right (warm) */
+        input[type="range"].temp-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+        }
         input[type="range"].temp-slider::-webkit-slider-runnable-track {
           background: linear-gradient(to right, #4299e1 0%, #63b3ed 50%, #ed8936 100%);
           height: 8px;
@@ -169,7 +202,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #fff;
+          background: var(--temperature-thumb-color, #fff);
           border: 2px solid #475569;
           cursor: pointer;
           margin-top: -4px;
@@ -185,7 +218,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #fff;
+          background: var(--temperature-thumb-color, #fff);
           cursor: pointer;
           border: 2px solid #475569;
           margin-top: -4px;
@@ -365,7 +398,14 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
                   step={temperatureKRange.precision}
                   value={temperature_k ?? temperatureKRange.min}
                   onChange={e => setTemperature_k(Number(e.target.value))}
-                  className="flex-1 accent-orange-500 dark:accent-orange-400 temp-slider"
+                  className="flex-1 temp-slider"
+                  style={{
+                    '--temperature-thumb-color': getTemperatureSliderColor(
+                      temperature_k ?? temperatureKRange.min,
+                      temperatureKRange.min,
+                      temperatureKRange.max
+                    ),
+                  } as React.CSSProperties}
                 />
                 <div className="text-xs text-slate-600 dark:text-muted w-12 text-right">
                   Тепло
