@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { YandexScenario } from '../types/index';
 import { Sidebar } from './Sidebar';
 import { DashboardHomeView } from './DashboardHomeView';
@@ -12,8 +12,8 @@ import { FanSettingsModal } from './modals/FanSettingsModal';
 import { GroupFanSettingsModal } from './modals/GroupFanSettingsModal';
 import { CameraStreamModal } from './modals/CameraStreamModal';
 import { SensorSettingsModal } from './modals/SensorSettingsModal';
-import { InfoModal } from './modals/InfoModal';
-import { Pencil, Power, Sun, Moon, RefreshCw, Info, LogOut, X, Image as ImageIcon } from 'lucide-react';
+import { SettingsModal } from './modals/SettingsModal';
+import { Pencil, Power, Sun, Moon, RefreshCw, Settings, LogOut, X, Image as ImageIcon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDashboardContext } from '../contexts/DashboardContext';
 import { useDashboardState } from '../hooks/useDashboardState';
@@ -21,8 +21,13 @@ import { isLightDevice, isLightGroup, isCameraDevice, isSensorDevice } from '../
 import packageJson from '../../package.json';
 import { BackgroundSettingsModal, DEFAULT_BACKGROUND_SETTINGS } from './modals/BackgroundSettingsModal';
 import type { BackgroundSettings } from './modals/BackgroundSettingsModal';
+import { getDeviceShortcuts } from '../utils/deviceShortcuts';
 
 const DEFAULT_HOME_NAME = 'Мой Дом';
+
+interface DashboardProps {
+    hasUpdateAvailable: boolean;
+}
 
 const parseBackgroundSettings = (stored: string | null): BackgroundSettings => {
     if (!stored) return DEFAULT_BACKGROUND_SETTINGS;
@@ -42,9 +47,10 @@ const parseBackgroundSettings = (stored: string | null): BackgroundSettings => {
     };
 };
 
-export const Dashboard: React.FC = () => {
+export const Dashboard: React.FC<DashboardProps> = ({ hasUpdateAvailable }) => {
     const ctx = useDashboardContext();
     const { theme, toggleTheme } = useTheme();
+    const [isUpdateAvailable, setIsUpdateAvailable] = useState(hasUpdateAvailable);
     const [isBackgroundSettingsOpen, setIsBackgroundSettingsOpen] = useState(false);
     const [backgroundSettings, setBackgroundSettings] = useState<BackgroundSettings>(DEFAULT_BACKGROUND_SETTINGS);
     const [editingBackgroundSettings, setEditingBackgroundSettings] = useState<BackgroundSettings>(DEFAULT_BACKGROUND_SETTINGS);
@@ -60,6 +66,56 @@ export const Dashboard: React.FC = () => {
         isLightDevice,
         isLightGroup,
     );
+
+    useEffect(() => {
+        if (hasUpdateAvailable) setIsUpdateAvailable(true);
+    }, [hasUpdateAvailable]);
+
+    const executeShortcutRef = useRef<(shortcutId: string) => void>(() => {});
+
+    const executeShortcut = useCallback((shortcutId: string) => {
+        const shortcut = getDeviceShortcuts().find(item => item.id === shortcutId);
+        if (!shortcut) return;
+        if (shortcut.targetType === 'scenario') {
+            if (ctx.data.scenarios.some(scenario => scenario.id === shortcut.targetId)) {
+                void ctx.onExecuteScenario(shortcut.targetId).catch(error => {
+                    console.error('Не удалось выполнить сценарий по горячей клавише', error);
+                });
+            }
+            return;
+        }
+
+        const device = ctx.data.devices.find(item => item.id === shortcut.targetId);
+        const onOff = device?.capabilities.find(capability => capability.type === 'devices.capabilities.on_off');
+        if (device && onOff) {
+            void ctx.onToggleDevice(device.id, onOff.state?.value === true).catch(error => {
+                console.error('Не удалось переключить устройство по горячей клавише', error);
+            });
+        }
+    }, [ctx.data.devices, ctx.data.scenarios, ctx.onExecuteScenario, ctx.onToggleDevice]);
+
+    useEffect(() => {
+        executeShortcutRef.current = executeShortcut;
+    }, [executeShortcut]);
+
+    useEffect(() => {
+        const shortcuts = getDeviceShortcuts().map(({ id, keys }) => ({ id, keys }));
+        void window.api.registerGlobalShortcuts(shortcuts).then(failedIds => {
+            if (failedIds.length > 0) {
+                console.warn('Не удалось зарегистрировать некоторые горячие клавиши', failedIds);
+            }
+        }).catch(error => {
+            console.error('Не удалось зарегистрировать глобальные горячие клавиши', error);
+        });
+
+        const unsubscribe = window.api.onGlobalShortcut(shortcutId => executeShortcutRef.current(shortcutId));
+        return () => {
+            unsubscribe();
+            void window.api.registerGlobalShortcuts([]).catch(error => {
+                console.error('Не удалось снять глобальные горячие клавиши', error);
+            });
+        };
+    }, []);
 
     // ---- Computed values ----
     const currentHousehold = useMemo(() => {
@@ -392,11 +448,13 @@ export const Dashboard: React.FC = () => {
                                     <RefreshCw className={`w-4 h-4 ${ctx.isRefreshing ? 'animate-spin' : ''}`} />
                                 </button>
                                 <button
-                                    onClick={() => state.setShowInfoModal(true)}
-                                    className="header-btn"
-                                    title="О программе"
+                                    onClick={() => state.setShowSettingsModal(true)}
+                                    className={`header-btn ${isUpdateAvailable ? 'has-update' : ''}`}
+                                    title={isUpdateAvailable ? 'Настройки — доступно обновление' : 'Настройки'}
+                                    aria-label={isUpdateAvailable ? 'Настройки — доступно обновление' : 'Настройки'}
                                 >
-                                    <Info className="w-4 h-4" />
+                                    <Settings className="w-4 h-4" />
+                                    {isUpdateAvailable && <span className="settings-update-dot" aria-hidden="true" />}
                                 </button>
                                 <button
                                     onClick={() => state.setShowConfirmModal(true)}
@@ -529,10 +587,13 @@ export const Dashboard: React.FC = () => {
                 />
             )}
 
-            <InfoModal
-                isOpen={state.modal.showInfoModal}
-                onClose={() => state.setShowInfoModal(false)}
+            <SettingsModal
+                isOpen={state.modal.showSettingsModal}
+                onClose={() => state.setShowSettingsModal(false)}
                 currentVersion={packageJson.version}
+                devices={ctx.data.devices}
+                scenarios={ctx.data.scenarios}
+                onUpdateAvailabilityChange={setIsUpdateAvailable}
             />
             {isBackgroundSettingsOpen && (
                 <BackgroundSettingsModal

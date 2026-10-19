@@ -329,7 +329,7 @@ function App() {
                     onSwitchHousehold: handleSwitchHousehold,
                     onLogout: handleLogout,
                 }}>
-                    <Dashboard />
+                    <Dashboard hasUpdateAvailable={!!updateInfo} />
                 </DashboardContext.Provider>
                 {updateInfo && (
                     <UpdateNotificationModal

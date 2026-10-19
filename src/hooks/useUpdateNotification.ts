@@ -46,14 +46,12 @@ export function useUpdateNotification(): UseUpdateNotificationReturn {
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
     useEffect(() => {
-        if (!getCheckUpdatesOnStartup()) {
-            return;
-        }
-
         checkForUpdates().then(newUpdateInfo => {
             if (newUpdateInfo) {
                 setUpdateInfo(newUpdateInfo);
-                setShowUpdateNotification(true);
+                if (getCheckUpdatesOnStartup()) {
+                    setShowUpdateNotification(true);
+                }
             }
         }).catch(error => {
             console.error('Ошибка при проверке обновлений:', error);

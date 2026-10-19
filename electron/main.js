@@ -1,6 +1,6 @@
 // main.js
 
-import { app, BrowserWindow, ipcMain, Menu, Tray, Notification } from 'electron'; // <-- Добавлен Menu, Tray
+import { app, BrowserWindow, ipcMain, Menu, Tray, Notification, globalShortcut } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 // Импорт yandex-api.js
@@ -52,6 +52,40 @@ if (isDev) {
 let mainWindow = null;
 let appTray = null; // Переменная для хранения экземпляра Tray
 let favoritesData = []; // Данные избранных устройств/сценариев
+const registeredShortcuts = new Map();
+
+const toElectronAccelerator = (shortcut) => {
+    const parts = shortcut.split('+');
+    const key = parts.pop();
+    if (!key) return null;
+
+    const modifiers = parts.map((modifier) => {
+        if (modifier === 'Ctrl') return 'Control';
+        if (modifier === 'Meta') return process.platform === 'darwin' ? 'Command' : 'Super';
+        return modifier;
+    });
+    const keyAliases = {
+        ArrowUp: 'Up',
+        ArrowDown: 'Down',
+        ArrowLeft: 'Left',
+        ArrowRight: 'Right',
+        Escape: 'Esc',
+        ' ': 'Space',
+    };
+    const acceleratorKey = keyAliases[key] || key;
+
+    if (!/^(?:[A-Z0-9]|F(?:[1-9]|1[0-2])|Up|Down|Left|Right|Esc|Space|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown)$/.test(acceleratorKey)) {
+        return null;
+    }
+    return [...modifiers, acceleratorKey].join('+');
+};
+
+const clearGlobalShortcuts = () => {
+    for (const accelerator of registeredShortcuts.keys()) {
+        globalShortcut.unregister(accelerator);
+    }
+    registeredShortcuts.clear();
+};
 
 // --- 1. Обработка закрытия окна (свернуть в трей) ---
 const minimizeToTray = (event) => {
@@ -317,6 +351,53 @@ if (!gotTheLock) {
         createWindow();
         createTray(); // Создаем Tray
 
+        ipcMain.handle('shortcuts:register-global', (event, shortcuts) => {
+            if (!mainWindow || event.sender !== mainWindow.webContents) {
+                throw new Error('Global shortcuts can only be registered by the main application window');
+            }
+            if (!Array.isArray(shortcuts)) {
+                throw new TypeError('Global shortcuts must be an array');
+            }
+
+            clearGlobalShortcuts();
+            const failedIds = [];
+            const seenAccelerators = new Set();
+
+            for (const shortcut of shortcuts) {
+                if (
+                    !shortcut ||
+                    typeof shortcut.id !== 'string' ||
+                    typeof shortcut.keys !== 'string' ||
+                    !shortcut.id ||
+                    !shortcut.keys
+                ) {
+                    continue;
+                }
+
+                const accelerator = toElectronAccelerator(shortcut.keys);
+                if (!accelerator || seenAccelerators.has(accelerator)) {
+                    failedIds.push(shortcut.id);
+                    continue;
+                }
+                seenAccelerators.add(accelerator);
+
+                try {
+                    const registered = globalShortcut.register(accelerator, () => {
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.webContents.send('shortcuts:trigger', shortcut.id);
+                        }
+                    });
+                    if (registered) registeredShortcuts.set(accelerator, shortcut.id);
+                    else failedIds.push(shortcut.id);
+                } catch (error) {
+                    console.error(`Failed to register global shortcut ${shortcut.keys}`, error);
+                    failedIds.push(shortcut.id);
+                }
+            }
+
+            return failedIds;
+        });
+
         const makeRetryCallback = (action) => {
             return (attempt, maxAttempts) => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
@@ -570,5 +651,9 @@ if (!gotTheLock) {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
         }
+    });
+
+    app.on('will-quit', () => {
+        clearGlobalShortcuts();
     });
 }

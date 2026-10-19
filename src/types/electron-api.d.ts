@@ -30,6 +30,8 @@ export interface IYandexApi {
 
     isAutostartEnabled: () => Promise<boolean>;
     setAutostartEnabled: (enabled: boolean) => Promise<boolean>;
+    registerGlobalShortcuts: (shortcuts: Array<{ id: string; keys: string }>) => Promise<string[]>;
+    onGlobalShortcut: (callback: (shortcutId: string) => void) => () => void;
 
     sendFavoritesToTray: (favorites: TrayMenuItem[]) => void;
     onTrayCommand: (callback: (command: string, id: string, currentState?: boolean) => void) => void;

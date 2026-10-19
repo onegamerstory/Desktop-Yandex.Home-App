@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld('api', {
     // Auto-launch methods
     isAutostartEnabled: () => ipcRenderer.invoke('autostart:isEnabled'),
     setAutostartEnabled: (enabled) => ipcRenderer.invoke('autostart:setEnabled', enabled), 
+
+    registerGlobalShortcuts: (shortcuts) => ipcRenderer.invoke('shortcuts:register-global', shortcuts),
+    onGlobalShortcut: (callback) => {
+        const handler = (_event, shortcutId) => callback(shortcutId);
+        ipcRenderer.on('shortcuts:trigger', handler);
+        return () => ipcRenderer.removeListener('shortcuts:trigger', handler);
+    },
 	
     // Отправка данных избранного из рендерера в главный процесс
     sendFavoritesToTray: (favorites) => ipcRenderer.send('tray:update-favorites', favorites),

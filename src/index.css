@@ -335,6 +335,22 @@ body {
   height: 15px;
 }
 
+.content-actions .header-btn.has-update {
+  position: relative;
+}
+
+.settings-update-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--app-bg);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
 /* Scrollbars */
 .sidebar::-webkit-scrollbar,
 .content::-webkit-scrollbar {

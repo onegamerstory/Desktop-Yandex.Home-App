@@ -8,7 +8,7 @@ import { SensorDisplayConfig } from '../components/modals/SensorSettingsModal';
 
 interface ModalState {
     showConfirmModal: boolean;
-    showInfoModal: boolean;
+    showSettingsModal: boolean;
     selectedThermostatDevice: YandexDevice | null;
     selectedLightDevice: YandexDevice | null;
     selectedFanDevice: YandexDevice | null;
@@ -53,7 +53,7 @@ export interface UseDashboardStateReturn {
     openSensorSettings: (device: YandexDevice) => void;
     closeSensorSettings: () => void;
     setShowConfirmModal: (show: boolean) => void;
-    setShowInfoModal: (show: boolean) => void;
+    setShowSettingsModal: (show: boolean) => void;
 
     // Collapse
     collapse: CollapseState;
@@ -135,7 +135,7 @@ export function useDashboardState(
 ): UseDashboardStateReturn {
     // --- MODAL STATE ---
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [selectedThermostatDevice, setSelectedThermostatDevice] = useState<YandexDevice | null>(null);
     const [selectedLightDevice, setSelectedLightDevice] = useState<YandexDevice | null>(null);
     const [selectedFanDevice, setSelectedFanDevice] = useState<YandexDevice | null>(null);
@@ -466,7 +466,7 @@ export function useDashboardState(
         // Modal
         modal: {
             showConfirmModal,
-            showInfoModal,
+            showSettingsModal,
             selectedThermostatDevice,
             selectedLightDevice,
             selectedFanDevice,
@@ -493,7 +493,7 @@ export function useDashboardState(
         openSensorSettings,
         closeSensorSettings,
         setShowConfirmModal,
-        setShowInfoModal,
+        setShowSettingsModal,
 
         // Collapse
         collapse: {
