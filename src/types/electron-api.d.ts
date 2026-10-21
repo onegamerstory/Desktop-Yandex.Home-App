@@ -5,6 +5,22 @@ export interface YandexApiRequestOptions {
     retry?: boolean;
 }
 
+export interface DownloadedUpdate {
+    id: string;
+    platform: NodeJS.Platform;
+    arch: string;
+    fileName: string;
+    filePath: string;
+    canAutoInstall: boolean;
+    isAppImage: boolean;
+}
+
+export interface UpdateDownloadProgress {
+    downloadedBytes: number;
+    totalBytes: number | null;
+    percent: number | null;
+}
+
 export interface IYandexApi {
     fetchUserInfo: (token: string, options?: YandexApiRequestOptions) => Promise<YandexUserInfoResponse>;
     fetchDevice: (token: string, deviceId: string) => Promise<YandexDevice>; 
@@ -31,6 +47,10 @@ export interface IYandexApi {
     isAutostartEnabled: () => Promise<boolean>;
     setAutostartEnabled: (enabled: boolean) => Promise<boolean>;
     registerGlobalShortcuts: (shortcuts: Array<{ id: string; keys: string }>) => Promise<string[]>;
+    downloadLatestUpdate: (version: string, requestId: string) => Promise<DownloadedUpdate>;
+    onUpdateDownloadProgress: (requestId: string, callback: (progress: UpdateDownloadProgress) => void) => () => void;
+    showDownloadedUpdate: (updateId: string) => Promise<void>;
+    installDownloadedUpdate: (updateId: string) => Promise<void>;
     onGlobalShortcut: (callback: (shortcutId: string) => void) => () => void;
 
     sendFavoritesToTray: (favorites: TrayMenuItem[]) => void;

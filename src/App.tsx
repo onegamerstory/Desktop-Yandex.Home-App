@@ -337,7 +337,6 @@ function App() {
                         onClose={() => setShowUpdateNotification(false)}
                         currentVersion={packageJson.version}
                         latestVersion={updateInfo.latestVersion}
-                        releaseUrl={updateInfo.releaseUrl}
                         releaseDate={updateInfo.releaseDate}
                     />
                 )}

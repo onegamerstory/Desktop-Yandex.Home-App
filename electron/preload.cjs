@@ -31,6 +31,18 @@ contextBridge.exposeInMainWorld('api', {
     setAutostartEnabled: (enabled) => ipcRenderer.invoke('autostart:setEnabled', enabled), 
 
     registerGlobalShortcuts: (shortcuts) => ipcRenderer.invoke('shortcuts:register-global', shortcuts),
+    downloadLatestUpdate: (version, requestId) => ipcRenderer.invoke('updates:download-latest', version, requestId),
+    onUpdateDownloadProgress: (requestId, callback) => {
+        const handler = (_event, progress) => {
+            if (progress.requestId === requestId) {
+                callback(progress);
+            }
+        };
+        ipcRenderer.on('updates:download-progress', handler);
+        return () => ipcRenderer.removeListener('updates:download-progress', handler);
+    },
+    showDownloadedUpdate: (updateId) => ipcRenderer.invoke('updates:show-downloaded', updateId),
+    installDownloadedUpdate: (updateId) => ipcRenderer.invoke('updates:install-downloaded', updateId),
     onGlobalShortcut: (callback) => {
         const handler = (_event, shortcutId) => callback(shortcutId);
         ipcRenderer.on('shortcuts:trigger', handler);

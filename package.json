@@ -38,7 +38,7 @@
   "build": {
     "appId": "com.onegamerstory.smarthomecontrol",
     "productName": "Yandex Smart Home Control",
-    "artifactName": "${productName} Setup v${version}.${ext}",
+    "artifactName": "${productName} Setup v${version}-${arch}.${ext}",
     "icon": "resources/icon.png",
     "files": [
       "dist/**/*",
@@ -96,6 +96,7 @@
         "deb",
         "rpm"
       ],
+      "artifactName": "${productName} Setup v${version}-${arch}.${ext}",
       "category": "Utility",
       "icon": "resources/linux-icons",
       "maintainer": "История Одного Геймера <gamecuts0412@gmail.com>",

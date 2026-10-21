@@ -5,7 +5,6 @@ import packageJson from '../../package.json';
 
 interface UpdateInfo {
     latestVersion: string;
-    releaseUrl: string;
     releaseDate: string;
 }
 
@@ -30,7 +29,6 @@ const checkForUpdates = async (): Promise<UpdateInfo | null> => {
         if (latestVersion && compareVersions(latestVersion, currentVersion) > 0) {
             return {
                 latestVersion,
-                releaseUrl: data.html_url,
                 releaseDate: new Date(data.published_at).toLocaleDateString('ru-RU'),
             };
         }

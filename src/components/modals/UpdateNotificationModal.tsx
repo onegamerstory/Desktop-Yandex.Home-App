@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { X, Download } from 'lucide-react';
+import { X } from 'lucide-react';
 import { ToggleSwitch } from '../ToggleSwitch';
 import { getCheckUpdatesOnStartup, setCheckUpdatesOnStartup } from '../../utils/updateSettings';
+import { UpdateDownloadAction } from './UpdateDownloadAction';
 
 interface UpdateNotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentVersion: string;
   latestVersion: string;
-  releaseUrl: string;
   releaseDate: string;
 }
 
@@ -17,7 +17,6 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
   onClose,
   currentVersion,
   latestVersion,
-  releaseUrl,
   releaseDate,
 }) => {
   const [checkOnStartup, setCheckOnStartup] = useState(getCheckUpdatesOnStartup);
@@ -83,15 +82,10 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
 
         {/* Footer */}
         <div className="border-t border-gray-200 dark:border-border-soft p-6 flex gap-3">
-          <a
-            href={releaseUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <UpdateDownloadAction
+            version={latestVersion}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary-hover text-white rounded-lg transition-colors font-medium text-sm"
-          >
-            <Download className="w-4 h-4" />
-            Скачать
-          </a>
+          />
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 bg-gray-200 dark:bg-surface hover:bg-gray-300 dark:hover:bg-surface-warm text-slate-900 dark:text-card-fg rounded-lg transition-colors font-medium text-sm"

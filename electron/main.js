@@ -1,8 +1,14 @@
 // main.js
 
-import { app, BrowserWindow, ipcMain, Menu, Tray, Notification, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, Notification, globalShortcut, shell } from 'electron';
+import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { createWriteStream } from 'node:fs';
+import { access, mkdir, rename, unlink } from 'node:fs/promises';
 import fs from 'fs';
 import path from 'path';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'url';
 // Импорт yandex-api.js
 import * as yandexApi from './yandex-api.js';
@@ -128,6 +134,236 @@ const clearGlobalShortcuts = () => {
         globalShortcut.unregister(accelerator);
     }
     registeredShortcuts.clear();
+};
+
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/onegamerstory/Desktop-Yandex.Home-App/releases/latest';
+const normalizeVersion = (version) => version.replace(/^v/i, '');
+
+const isMainWindowRequest = (event) =>
+    mainWindow && !mainWindow.isDestroyed() && event.sender === mainWindow.webContents;
+
+const getLinuxPackageExtension = () => {
+    if (process.env.APPIMAGE) return '.AppImage';
+
+    try {
+        const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+        const osInfo = Object.fromEntries(osRelease.split(/\r?\n/).map((line) => {
+            const separator = line.indexOf('=');
+            if (separator < 0) return [];
+            return [line.slice(0, separator), line.slice(separator + 1).replace(/^["']|["']$/g, '')];
+        }).filter((entry) => entry.length === 2));
+        const distroIds = `${osInfo.ID || ''} ${osInfo.ID_LIKE || ''}`.toLowerCase();
+        if (/\b(debian|ubuntu|linuxmint|pop|raspbian)\b/.test(distroIds)) return '.deb';
+        if (/\b(fedora|rhel|centos|rocky|almalinux|suse|opensuse)\b/.test(distroIds)) return '.rpm';
+    } catch (error) {
+        if (error.code !== 'ENOENT') console.error('Не удалось определить формат пакета Linux', error);
+    }
+    return '.AppImage';
+};
+
+const matchesReleaseVersion = (name, version) => {
+    const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|[^a-z0-9])v?${escapedVersion}(?=$|[^0-9])`, 'i').test(name);
+};
+
+const getUpdateAsset = (assets, version) => {
+    const platform = process.platform;
+    const arch = process.arch;
+    const files = assets.filter((asset) => typeof asset.name === 'string' && typeof asset.browser_download_url === 'string');
+    let matches = [];
+
+    if (platform === 'win32') {
+        if (arch !== 'x64') {
+            throw new Error(`Автоматическая загрузка обновлений Windows для архитектуры ${arch} не поддерживается.`);
+        }
+        matches = files.filter(({ name }) =>
+            name.toLowerCase().endsWith(`-${arch}.exe`) &&
+            matchesReleaseVersion(name, version),
+        );
+    } else if (platform === 'darwin') {
+        matches = files.filter(({ name }) =>
+            name.toLowerCase().endsWith(`-${arch}.dmg`) &&
+            matchesReleaseVersion(name, version),
+        );
+    } else if (platform === 'linux') {
+        const extension = getLinuxPackageExtension();
+        matches = files.filter(({ name }) =>
+            name.toLowerCase().endsWith(`-${arch}${extension}`.toLowerCase()) &&
+            matchesReleaseVersion(name, version),
+        );
+    } else {
+        throw new Error(`Загрузка обновлений для ОС ${platform} не поддерживается.`);
+    }
+
+    if (matches.length !== 1) {
+        throw new Error(`В последнем релизе не найден однозначный установщик для ${platform} (${arch}).`);
+    }
+    return matches[0];
+};
+
+const createUniqueDownloadPath = async (directory, fileName) => {
+    const safeFileName = path.basename(fileName);
+    const extension = path.extname(safeFileName);
+    const baseName = path.basename(safeFileName, extension);
+    let candidate = path.join(directory, safeFileName);
+    let suffix = 1;
+    while (true) {
+        try {
+            await access(candidate);
+            candidate = path.join(directory, `${baseName} (${suffix++})${extension}`);
+        } catch (error) {
+            if (error.code === 'ENOENT') return candidate;
+            throw error;
+        }
+    }
+};
+
+const downloadLatestUpdate = async (expectedVersion, reportProgress) => {
+    if (!app.isPackaged) {
+        throw new Error('Скачивание обновлений доступно только в установленной версии приложения.');
+    }
+    if (typeof expectedVersion !== 'string' || !/^[v\d][\w.+-]*$/i.test(expectedVersion)) {
+        throw new TypeError('Некорректная версия обновления.');
+    }
+
+    const releaseResponse = await fetch(GITHUB_RELEASES_URL, {
+        headers: {
+            Accept: 'application/vnd.github+json',
+            'User-Agent': 'Yandex-Smart-Home-Control',
+        },
+    });
+    if (!releaseResponse.ok) {
+        throw new Error(`Не удалось получить список файлов обновления (HTTP ${releaseResponse.status}).`);
+    }
+
+    const release = await releaseResponse.json();
+    if (
+        typeof release.tag_name !== 'string' ||
+        normalizeVersion(release.tag_name) !== normalizeVersion(expectedVersion) ||
+        !Array.isArray(release.assets)
+    ) {
+        throw new Error('Релиз обновления изменился. Проверьте наличие обновлений и повторите попытку.');
+    }
+
+    const asset = getUpdateAsset(release.assets, normalizeVersion(release.tag_name));
+    const assetUrl = new URL(asset.browser_download_url);
+    if (assetUrl.protocol !== 'https:' || assetUrl.hostname !== 'github.com') {
+        throw new Error('Получена некорректная ссылка на файл обновления.');
+    }
+    const downloadResponse = await fetch(asset.browser_download_url);
+    if (!downloadResponse.ok || !downloadResponse.body) {
+        throw new Error(`Не удалось скачать установщик (HTTP ${downloadResponse.status}).`);
+    }
+    const contentLength = Number(downloadResponse.headers.get('content-length'));
+    const totalBytes = Number.isFinite(contentLength) && contentLength > 0 ? contentLength : null;
+    let downloadedBytes = 0;
+    let lastReportedPercent = -1;
+    let lastReportedAt = 0;
+    reportProgress({ downloadedBytes, totalBytes, percent: totalBytes ? 0 : null });
+
+    const downloadsDirectory = app.getPath('downloads');
+    await mkdir(downloadsDirectory, { recursive: true });
+    const filePath = await createUniqueDownloadPath(downloadsDirectory, asset.name);
+    const temporaryPath = `${filePath}.${randomUUID()}.download`;
+    let downloadedFileCreated = false;
+    try {
+        const progressTransform = new Transform({
+            transform(chunk, _encoding, callback) {
+                downloadedBytes += chunk.length;
+                const percent = totalBytes
+                    ? Math.min(99, Math.floor((downloadedBytes / totalBytes) * 100))
+                    : null;
+                const now = Date.now();
+                if (percent !== lastReportedPercent || now - lastReportedAt >= 250) {
+                    reportProgress({ downloadedBytes, totalBytes, percent });
+                    lastReportedPercent = percent;
+                    lastReportedAt = now;
+                }
+                callback(null, chunk);
+            },
+        });
+        await pipeline(
+            Readable.fromWeb(downloadResponse.body),
+            progressTransform,
+            createWriteStream(temporaryPath, { flags: 'wx' }),
+        );
+        await rename(temporaryPath, filePath);
+        downloadedFileCreated = true;
+        if (asset.name.toLowerCase().endsWith('.appimage')) {
+            await fs.promises.chmod(filePath, 0o755);
+        }
+    } catch (error) {
+        await unlink(temporaryPath).catch((cleanupError) => {
+            if (cleanupError.code !== 'ENOENT') console.error('Не удалось удалить временный файл обновления', cleanupError);
+        });
+        if (downloadedFileCreated) {
+            await unlink(filePath).catch((cleanupError) => {
+                if (cleanupError.code !== 'ENOENT') console.error('Не удалось удалить неполный файл обновления', cleanupError);
+            });
+        }
+        throw error;
+    }
+    reportProgress({ downloadedBytes, totalBytes, percent: 100 });
+
+    return {
+        platform: process.platform,
+        arch: process.arch,
+        fileName: asset.name,
+        filePath,
+        canAutoInstall: app.isPackaged && (process.platform === 'win32' || (process.platform === 'linux' && Boolean(process.env.APPIMAGE))),
+        isAppImage: process.platform === 'linux' && Boolean(process.env.APPIMAGE),
+    };
+};
+
+const waitForProcessStart = (childProcess) => new Promise((resolve, reject) => {
+    childProcess.once('spawn', resolve);
+    childProcess.once('error', reject);
+});
+
+let downloadedUpdate = null;
+const installDownloadedUpdate = async (updateId) => {
+    if (!app.isPackaged) {
+        throw new Error('Установка обновлений доступна только в установленной версии приложения.');
+    }
+    if (!downloadedUpdate || typeof updateId !== 'string' || updateId !== downloadedUpdate.id) {
+        throw new Error('Файл обновления не найден. Скачайте его заново.');
+    }
+    await access(downloadedUpdate.filePath);
+
+    if (process.platform === 'win32') {
+        const installer = spawn(downloadedUpdate.filePath, [], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: false,
+        });
+        await waitForProcessStart(installer);
+        installer.unref();
+        app.quit();
+        return;
+    }
+
+    if (process.platform === 'linux' && downloadedUpdate.isAppImage && process.env.APPIMAGE) {
+        const currentAppImage = path.resolve(process.env.APPIMAGE);
+        const directory = path.dirname(currentAppImage);
+        await access(directory, fs.constants.W_OK);
+        const replacementPath = `${currentAppImage}.update-${process.pid}`;
+        const quote = (value) => `'${value.replace(/'/g, "'\\''")}'`;
+        const script = [
+            'set -e',
+            'sleep 1',
+            `cp -- ${quote(downloadedUpdate.filePath)} ${quote(replacementPath)}`,
+            `chmod 755 ${quote(replacementPath)}`,
+            `mv -f -- ${quote(replacementPath)} ${quote(currentAppImage)}`,
+            `exec ${quote(currentAppImage)}`,
+        ].join('; ');
+        const updater = spawn('/bin/sh', ['-c', script], { detached: true, stdio: 'ignore' });
+        await waitForProcessStart(updater);
+        updater.unref();
+        app.quit();
+        return;
+    }
+
+    throw new Error('Автоматическая установка обновления для этого варианта Linux не поддерживается.');
 };
 
 // --- 1. Обработка закрытия окна (свернуть в трей) ---
@@ -408,6 +644,42 @@ if (!gotTheLock) {
 
         createWindow();
         createTray(); // Создаем Tray
+
+        ipcMain.handle('updates:download-latest', async (event, expectedVersion, requestId) => {
+            if (!isMainWindowRequest(event)) {
+                throw new Error('Запрос на обновление должен исходить из главного окна приложения.');
+            }
+            if (typeof requestId !== 'string' || requestId.length > 100) {
+                throw new TypeError('Некорректный идентификатор загрузки обновления.');
+            }
+            downloadedUpdate = {
+                ...await downloadLatestUpdate(expectedVersion, (progress) => {
+                    if (isMainWindowRequest(event)) {
+                        event.sender.send('updates:download-progress', { requestId, ...progress });
+                    }
+                }),
+                id: randomUUID(),
+            };
+            return downloadedUpdate;
+        });
+
+        ipcMain.handle('updates:show-downloaded', async (event, updateId) => {
+            if (!isMainWindowRequest(event)) {
+                throw new Error('Папку с обновлением можно открыть только из главного окна приложения.');
+            }
+            if (!downloadedUpdate || typeof updateId !== 'string' || updateId !== downloadedUpdate.id) {
+                throw new Error('Файл обновления не найден. Скачайте его заново.');
+            }
+            await access(downloadedUpdate.filePath);
+            shell.showItemInFolder(downloadedUpdate.filePath);
+        });
+
+        ipcMain.handle('updates:install-downloaded', async (event, updateId) => {
+            if (!isMainWindowRequest(event)) {
+                throw new Error('Установку обновления можно запустить только из главного окна приложения.');
+            }
+            await installDownloadedUpdate(updateId);
+        });
 
         ipcMain.handle('shortcuts:register-global', (event, shortcuts) => {
             if (!mainWindow || event.sender !== mainWindow.webContents) {

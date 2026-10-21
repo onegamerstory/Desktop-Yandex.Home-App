@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Plus, Trash2, Keyboard } from 'lucide-react';
+import { X, Plus, Trash2, Keyboard } from 'lucide-react';
 import { ToggleSwitch } from '../ToggleSwitch';
 import { getCheckUpdatesOnStartup, setCheckUpdatesOnStartup } from '../../utils/updateSettings';
 import { compareVersions } from '../../utils/dataUtils';
 import { formatKeyboardShortcut, getDeviceShortcuts, saveDeviceShortcuts } from '../../utils/deviceShortcuts';
 import type { DeviceShortcut, ShortcutTargetType } from '../../utils/deviceShortcuts';
 import type { YandexDevice, YandexScenario } from '../../types';
+import { UpdateDownloadAction } from './UpdateDownloadAction';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -18,7 +19,6 @@ interface SettingsModalProps {
 
 interface GitHubRelease {
   tag_name: string;
-  html_url: string;
   published_at: string;
   body?: string;
 }
@@ -106,7 +106,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const latestVersion = latestRelease?.tag_name || null;
   const isUpdateAvailable = latestVersion && compareVersions(latestVersion, currentVersion) > 0;
-  const downloadUrl = latestRelease?.html_url || '#';
 
   const updateShortcuts = (nextShortcuts: DeviceShortcut[]) => {
     try {
@@ -365,15 +364,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Footer */}
         <div className="border-t border-gray-200 dark:border-border-soft p-6 flex gap-3">
           {activeTab === 'updates' && isUpdateAvailable && (
-            <a
-              href={downloadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <UpdateDownloadAction
+              version={latestVersion}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary-hover text-white rounded-lg transition-colors font-medium text-sm"
-            >
-              <Download className="w-4 h-4" />
-              Скачать
-            </a>
+            />
           )}
           <button
             onClick={onClose}
