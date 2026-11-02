@@ -2,9 +2,10 @@ name: Build Desktop App Installers (CI)
 
 on:
   push:
-    # Рабочий процесс запускается ТОЛЬКО при пуше тега, соответствующего паттерну vX.Y.Z
+    # Обычные и явно помеченные тестовые теги публикуются в разных каналах.
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'test-*'
 
 jobs:
   build:
@@ -107,9 +108,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          name: ${{ startsWith(github.ref_name, 'test-') && format('Test prerelease {0}', github.ref_name) || format('Release {0}', github.ref_name) }}
           draft: false
-          prerelease: false
+          prerelease: ${{ startsWith(github.ref_name, 'test-') }}
           generate_release_notes: true
           files: |
             artifacts/**/*.exe

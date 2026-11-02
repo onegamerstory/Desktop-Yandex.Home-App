@@ -61,6 +61,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ hasUpdateAvailable }) => {
         ctx.activeHouseholdId,
         ctx.activeSidebarView,
         ctx.onSetDeviceMode,
+        ctx.onSetLightSettings,
         { devices: ctx.data.devices },
         isCameraDevice,
         isLightDevice,
