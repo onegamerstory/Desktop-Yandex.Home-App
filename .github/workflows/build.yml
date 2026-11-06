@@ -21,7 +21,7 @@ jobs:
           - os: macos-15-intel
             name: macos-x64
             build_args: --mac dmg --x64
-          - os: macos-14
+          - os: macos-15
             name: macos-arm64
             build_args: --mac dmg --arm64
           - os: ubuntu-latest

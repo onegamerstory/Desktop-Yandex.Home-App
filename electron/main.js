@@ -50,6 +50,30 @@ const runSingleFlight = (key, fn) => {
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const DEV_VITE_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
 
+// Parent terminal / electron-wait can close stdout/stderr while the app keeps running.
+// Without this, console.* throws EPIPE and Electron shows "A JavaScript error occurred in the main process".
+const isBrokenPipeError = (err) =>
+    err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_DESTROYED' || err?.code === 'EIO';
+
+for (const stream of [process.stdout, process.stderr]) {
+    stream?.on?.('error', (err) => {
+        if (isBrokenPipeError(err)) return;
+        throw err;
+    });
+}
+
+for (const method of ['log', 'info', 'warn', 'error', 'debug']) {
+    const original = console[method].bind(console);
+    console[method] = (...args) => {
+        try {
+            original(...args);
+        } catch (err) {
+            if (isBrokenPipeError(err)) return;
+            throw err;
+        }
+    };
+}
+
 if (isDev) {
     // Отделяем dev-экземпляр от установленного приложения (single-instance, userData, трей)
     app.setName('Yandex Smart Home Control DEV');

@@ -34,6 +34,41 @@ const drainBody = async (response) => {
     }
 };
 
+/**
+ * mobileproxy.passport.yandex.net returns 403 HTML for desktop Chrome UAs.
+ * Keep browser UA only for yandex.ru HTML/storage pages.
+ */
+const PASSPORT_MOBILE_UA =
+    'com.yandex.mobile.auth.sdk/7.43.1.75534 Android/12 (Google; Pixel 6)';
+
+const parseJsonResponse = async (response, label) => {
+    const contentType = response.headers.get('content-type') || '';
+    const bodyText = await response.text();
+    const trimmed = bodyText.trim();
+
+    if (!trimmed) {
+        throw new Error(`${label}: пустой ответ (HTTP ${response.status})`);
+    }
+
+    const looksLikeHtml = trimmed.startsWith('<')
+        || contentType.includes('text/html');
+    if (looksLikeHtml) {
+        throw new Error(
+            `${label}: ожидался JSON, получен HTML (HTTP ${response.status}). `
+            + 'Проверьте x-token или повторите вход.',
+        );
+    }
+
+    try {
+        return JSON.parse(trimmed);
+    } catch (error) {
+        const preview = trimmed.slice(0, 80).replace(/\s+/g, ' ');
+        throw new Error(
+            `${label}: некорректный JSON (HTTP ${response.status}): ${preview}`,
+        );
+    }
+};
+
 const getQuasarSession = async (xToken) => {
     const trimmedToken = xToken.trim();
     if (sessionCache.has(trimmedToken)) {
@@ -43,19 +78,21 @@ const getQuasarSession = async (xToken) => {
     const jar = new CookieJar();
     const quasarFetch = fetchCookie(fetch, jar);
 
+    // Do NOT send desktop Chrome UA here — mobileproxy answers with 403 HTML.
     const authResponse = await fetch('https://mobileproxy.passport.yandex.net/1/bundle/auth/x_token/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
             'Ya-Consumer-Authorization': `OAuth ${trimmedToken}`,
-            'User-Agent': BROWSER_UA,
+            'User-Agent': PASSPORT_MOBILE_UA,
         },
         body: 'type=x-token&retpath=https%3A%2F%2Fwww.yandex.ru',
     });
 
-    const auth = await authResponse.json();
+    const auth = await parseJsonResponse(authResponse, 'Quasar auth');
     if (auth.status !== 'ok') {
-        const details = auth.errors?.[0]?.message || auth.errors?.[0]?.code || auth.status;
+        const details = auth.errors?.[0]?.message || auth.errors?.[0]?.code || auth.errors?.[0] || auth.status;
         throw new Error(`Quasar auth: ${details}`);
     }
 
@@ -83,7 +120,7 @@ const getQuasarSession = async (xToken) => {
             Accept: 'application/json,text/plain,*/*',
         },
     });
-    const storage = await storageResponse.json();
+    const storage = await parseJsonResponse(storageResponse, 'Quasar storage');
     const uid = storage?.storage?.user?.uid;
     if (!uid) {
         throw new Error('Quasar auth: сессия не подтверждена (нет uid)');
@@ -195,7 +232,7 @@ const requestHlsStream = async (xToken, deviceId) => {
         throw new Error(`Quasar API: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response, 'Quasar HLS');
 
     if (data.status !== 'ok') {
         throw new Error(data.message || data.text || 'Ошибка Quasar API при запросе видеопотока');
@@ -224,7 +261,7 @@ const requestWebrtcRoom = async (xToken, deviceId) => {
         throw new Error(`Quasar WebRTC: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response, 'Quasar WebRTC');
     console.log('[Camera] create-room response:', JSON.stringify({
         status: data.status,
         message: data.message,
@@ -295,13 +332,15 @@ export const getQuasarDevice = async (xToken, deviceId) => {
 
     const listResponse = await session.fetch('https://iot.quasar.yandex.ru/m/v3/user/devices');
     if (listResponse.ok) {
-        const listData = await listResponse.json();
+        const listData = await parseJsonResponse(listResponse, 'Quasar devices');
         for (const house of listData.households ?? []) {
             const found = (house.all ?? []).find((item) => item.id === deviceId);
             if (found) {
                 return found;
             }
         }
+    } else {
+        await drainBody(listResponse);
     }
 
     const detailResponse = await session.fetch(`${QUASAR_ACTIONS_URL}/${deviceId}`);
@@ -309,7 +348,7 @@ export const getQuasarDevice = async (xToken, deviceId) => {
         throw new Error(`Quasar API: ${detailResponse.status} ${detailResponse.statusText}`);
     }
 
-    const detailData = await detailResponse.json();
+    const detailData = await parseJsonResponse(detailResponse, 'Quasar device');
     if (detailData.status !== 'ok') {
         throw new Error(detailData.message || detailData.text || 'Ошибка Quasar API');
     }
@@ -411,7 +450,13 @@ const postQuasarDeviceActions = async (session, deviceId, actions) => {
             continue;
         }
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await parseJsonResponse(response, 'Quasar actions');
+        } catch (error) {
+            lastError = error;
+            continue;
+        }
         console.log(`[Quasar] ${url.includes('v3') ? 'v3' : 'v1'} response:`, JSON.stringify(data).slice(0, 400));
         if (data.status !== 'ok') {
             lastError = new Error(data.message || data.text || 'Ошибка Quasar API');
