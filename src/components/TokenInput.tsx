@@ -41,7 +41,7 @@ export const TokenInput: React.FC<TokenInputProps> = ({ onTokenSubmit, isLoading
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="y0_AgAAAA..."
-              className="w-full bg-gray-100 dark:bg-surface-warm border border-gray-300 dark:border-border text-slate-900 dark:text-card-fg placeholder-gray-400 dark:placeholder-muted rounded-xl px-4 py-3 outline-none focus:border-[#176f91] dark:focus:border-primary focus:ring-1 focus:ring-[#176f91]/30 dark:focus:ring-primary/30 transition-all duration-200"
+              className="w-full bg-gray-100 dark:bg-surface-warm border border-gray-300 dark:border-border text-slate-900 dark:text-card-fg placeholder-gray-400 dark:placeholder-muted rounded-xl px-4 py-3 outline-none focus:border-[#176f91] dark:focus:border-outline-accent focus:ring-1 focus:ring-[#176f91]/30 dark:focus:ring-outline-accent/30 transition-all duration-200"
               required
             />
             <ShieldCheck className="absolute right-3 top-3.5 w-5 h-5 text-gray-400 dark:text-muted" />

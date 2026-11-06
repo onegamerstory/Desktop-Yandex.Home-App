@@ -296,8 +296,8 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
                 <span className="ml-2 text-xs text-slate-500 dark:text-muted">({brightness}%)</span>
               </label>
               <div className="flex items-center gap-4">
-                <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-primary/20">
-                  <Lightbulb className="w-5 h-5 text-[#176f91] dark:text-primary" />
+                <div className="p-2 rounded-full bg-[#176f91]/10 dark:bg-control-accent/20">
+                  <Lightbulb className="w-5 h-5 text-[#176f91] dark:text-control-accent" />
                 </div>
                 <input
                   type="range"
@@ -306,7 +306,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
                   step={brightnessRange.precision}
                   value={brightness ?? brightnessRange.min}
                   onChange={e => setBrightness(Number(e.target.value))}
-                  className="flex-1 accent-[#176f91] dark:accent-primary"
+                  className="flex-1 accent-[#176f91] dark:accent-control-accent"
                 />
               </div>
               <div className="flex justify-between text-xs text-slate-500 dark:text-muted mt-2">
@@ -323,7 +323,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
               disabled={!hsvCapability && !rgbCapability}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'color'
-                  ? 'bg-[#176f91] dark:bg-primary text-white'
+                  ? 'bg-[#176f91] dark:bg-control-accent text-white dark:text-control-accent-on'
                   : 'bg-gray-100 dark:bg-white/10 text-slate-700 dark:text-card-fg hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
@@ -335,7 +335,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
               disabled={!temperatureCapability}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                 colorMode === 'temperature'
-                  ? 'bg-[#176f91] dark:bg-primary text-white'
+                  ? 'bg-[#176f91] dark:bg-control-accent text-white dark:text-control-accent-on'
                   : 'bg-gray-100 dark:bg-white/10 text-slate-700 dark:text-card-fg hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
@@ -359,7 +359,7 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
                       className={`
                         relative w-12 h-12 rounded-lg transition-all duration-200 shadow-md
                         ${selectedColor?.name === color.name
-                          ? 'ring-2 ring-[#176f91] dark:ring-primary scale-105 shadow-md'
+                          ? 'ring-2 ring-[#176f91] dark:ring-control-accent scale-105 shadow-md'
                           : 'hover:scale-105 hover:shadow-md'
                         }
                       `}
@@ -424,14 +424,14 @@ export const GroupLightSettingsModal: React.FC<GroupLightSettingsModalProps> = (
           <button
             onClick={handleApply}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-primary text-[#176f91] dark:text-primary hover:bg-[#176f91]/10 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-control-accent text-[#176f91] dark:text-control-accent hover:bg-[#176f91]/10 dark:hover:bg-control-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Применить'}
           </button>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-control-accent hover:bg-[#145a72] dark:hover:bg-control-accent-hover text-white dark:text-control-accent-on disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Закрыть'}
           </button>

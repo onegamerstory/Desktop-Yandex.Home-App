@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Keyboard } from 'lucide-react';
+import { X, Plus, Trash2, Keyboard, Palette } from 'lucide-react';
 import { ToggleSwitch } from '../ToggleSwitch';
 import { getCheckUpdatesOnStartup, setCheckUpdatesOnStartup } from '../../utils/updateSettings';
 import { compareVersions } from '../../utils/dataUtils';
 import { formatKeyboardShortcut, getDeviceShortcuts, saveDeviceShortcuts } from '../../utils/deviceShortcuts';
+import { useTheme } from '../../contexts/ThemeContext';
+import { COLOR_SCHEMES, COLOR_SCHEME_IDS } from '../../constants/colorSchemes';
 import type { DeviceShortcut, ShortcutTargetType } from '../../utils/deviceShortcuts';
 import type { YandexDevice, YandexScenario } from '../../types';
 import { UpdateDownloadAction } from './UpdateDownloadAction';
@@ -36,10 +38,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
   const [checkOnStartup, setCheckOnStartup] = useState(getCheckUpdatesOnStartup);
-  const [activeTab, setActiveTab] = useState<'updates' | 'shortcuts'>('updates');
+  const [activeTab, setActiveTab] = useState<'updates' | 'shortcuts' | 'colorSchemes'>('updates');
   const [shortcuts, setShortcuts] = useState<DeviceShortcut[]>([]);
   const [recordingShortcutId, setRecordingShortcutId] = useState<string | null>(null);
   const [shortcutError, setShortcutError] = useState<string | null>(null);
+  const { theme, setTheme } = useTheme();
 
   const availableDevices = devices.filter(device =>
     device.capabilities.some(capability => capability.type === 'devices.capabilities.on_off')
@@ -190,6 +193,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             Горячие клавиши
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('colorSchemes')}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${activeTab === 'colorSchemes' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-white/10 text-slate-700 dark:text-card-fg'}`}
+          >
+            Цветовые схемы
+          </button>
         </div>
 
         {/* Content */}
@@ -214,7 +224,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {isLoading && (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#176f91] dark:border-primary"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#176f91] dark:border-outline-accent"></div>
               </div>
             )}
 
@@ -266,7 +276,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
             </>
-          ) : (
+          ) : activeTab === 'shortcuts' ? (
             <section className="space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -315,7 +325,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             onBlur={() => setRecordingShortcutId(current => current === shortcut.id ? null : current)}
                             value={recordingShortcutId === shortcut.id ? 'Нажмите сочетание клавиш…' : shortcut.keys || 'Назначить сочетание'}
                             onFocus={() => setRecordingShortcutId(shortcut.id)}
-                            className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-left text-sm outline-none ${recordingShortcutId === shortcut.id ? 'border-primary bg-primary/10 dark:bg-primary/10' : 'border-gray-200 bg-gray-50 dark:border-border-soft dark:bg-surface-warm'}`}
+                            className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-left text-sm outline-none ${recordingShortcutId === shortcut.id ? 'border-outline-accent bg-primary/10 dark:bg-primary/10' : 'border-gray-200 bg-gray-50 dark:border-border-soft dark:bg-surface-warm'}`}
                             aria-label="Сочетание клавиш"
                             style={{ backgroundColor: recordingShortcutId === shortcut.id ? 'var(--surface)' : 'var(--surface-warm)', color: 'var(--fg)' }}
                           />
@@ -357,6 +367,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
               {shortcutError && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{shortcutError}</p>}
+            </section>
+          ) : (
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-card-fg">Цветовые схемы</h3>
+                <p className="mt-1 text-xs text-slate-600 dark:text-muted">
+                  Выберите палитру для оформления приложения. Светлая и тёмная темы переключаются кнопкой в главном окне.
+                </p>
+              </div>
+              {COLOR_SCHEME_IDS.map(id => {
+                const scheme = COLOR_SCHEMES[id];
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTheme(id)}
+                    aria-pressed={theme === id}
+                    className={`w-full rounded-lg border p-3 text-left transition-colors ${theme === id ? 'border-outline-accent bg-primary/10' : 'border-gray-200 hover:bg-gray-50 dark:border-border-soft dark:hover:bg-white/5'}`}
+                  >
+                    <span className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-900 dark:text-card-fg">{scheme.name}</span>
+                      {theme === id && <Palette className="h-4 w-4 text-primary" aria-hidden="true" />}
+                    </span>
+                    <span className="mt-3 flex gap-1.5" aria-hidden="true">
+                      {scheme.colors.map(color => (
+                        <span key={color} className="h-6 flex-1 rounded" style={{ backgroundColor: color }} />
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
             </section>
           )}
         </div>

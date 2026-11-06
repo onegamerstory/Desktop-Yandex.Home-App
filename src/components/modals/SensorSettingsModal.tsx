@@ -241,7 +241,7 @@ export const SensorSettingsModal: React.FC<SensorSettingsModalProps> = ({
                   className={`
                     flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200
                     ${isPrimary
-                      ? 'border-primary bg-primary/10 dark:bg-primary/20 shadow-md'
+                      ? 'border-outline-accent bg-primary/10 dark:bg-primary/20 shadow-md'
                       : isSecondary
                         ? 'border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm'
                         : 'border-gray-100 dark:border-border bg-gray-50/50 dark:bg-surface hover:border-gray-200 dark:hover:border-border-soft'
@@ -258,8 +258,8 @@ export const SensorSettingsModal: React.FC<SensorSettingsModalProps> = ({
                     className={`
                       flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200
                       ${isPrimary
-                        ? 'border-primary bg-primary'
-                        : 'border-gray-300 dark:border-muted hover:border-primary dark:hover:border-primary'
+                        ? 'border-outline-accent bg-primary'
+                        : 'border-gray-300 dark:border-muted hover:border-outline-accent dark:hover:border-outline-accent'
                       }
                     `}
                     title="Сделать основным"
@@ -302,7 +302,7 @@ export const SensorSettingsModal: React.FC<SensorSettingsModalProps> = ({
                       ${isSecondary
                         ? 'border-blue-400 dark:border-blue-500 bg-blue-400 dark:bg-blue-500'
                         : isPrimary
-                          ? 'border-primary/30 dark:border-primary/30'
+                          ? 'border-outline-accent/30 dark:border-outline-accent/30'
                           : 'border-gray-300 dark:border-muted hover:border-blue-400 dark:hover:border-blue-500'
                       }
                     `}
@@ -323,7 +323,7 @@ export const SensorSettingsModal: React.FC<SensorSettingsModalProps> = ({
         {/* Legend */}
         <div className="flex items-center gap-4 mb-6 text-xs text-slate-500 dark:text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full border-2 border-primary bg-primary" />
+            <span className="w-3 h-3 rounded-full border-2 border-outline-accent bg-primary" />
             Основное
           </span>
           <span className="flex items-center gap-1.5">
@@ -341,7 +341,7 @@ export const SensorSettingsModal: React.FC<SensorSettingsModalProps> = ({
           <button
             onClick={handleSave}
             disabled={!isValid}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-primary text-[#176f91] dark:text-primary hover:bg-[#176f91]/10 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-outline-accent text-[#176f91] dark:text-outline-accent hover:bg-[#176f91]/10 dark:hover:bg-outline-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Сохранить
           </button>

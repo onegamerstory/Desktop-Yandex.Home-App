@@ -57,7 +57,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onExecute,
           cursor: 'pointer',
           opacity: isEditMode || isFavorite ? 1 : 0,
           transition: 'opacity 150ms ease',
-          color: isEditMode ? 'var(--muted)' : isFavorite ? 'var(--fav-star)' : 'var(--border)',
+          color: isEditMode ? 'var(--muted)' : isFavorite ? 'var(--fav-star)' : 'var(--accent)',
         }}
         className="scenario-fav-btn"
       >
