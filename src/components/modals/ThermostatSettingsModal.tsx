@@ -162,7 +162,7 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
         className={`
           flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all duration-200
           ${isSelected 
-            ? 'border-[#176f91] dark:border-primary bg-[#176f91]/10 dark:bg-primary/20 shadow-md scale-105' 
+            ? 'border-[#176f91] dark:border-control-accent bg-[#176f91]/10 dark:bg-control-accent/20 shadow-md scale-105'
             : 'border-gray-200 dark:border-border bg-white dark:bg-surface hover:border-gray-300 dark:hover:border-border opacity-60 hover:opacity-80'
           }
         `}
@@ -172,15 +172,15 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
           className={`
             w-7 h-7 transition-all duration-200
             ${isSelected 
-              ? 'text-[#176f91] dark:text-primary opacity-100' 
+              ? 'text-[#176f91] dark:text-control-accent opacity-100'
               : 'text-gray-400 dark:text-muted opacity-50'
             }
           `} 
         />
         <span className={`
           text-xs font-medium transition-all duration-200
-          ${isSelected 
-            ? 'text-[#176f91] dark:text-primary opacity-100' 
+          ${isSelected
+            ? 'text-[#176f91] dark:text-control-accent opacity-100'
             : 'text-gray-500 dark:text-muted opacity-60'
           }
         `}>
@@ -284,7 +284,7 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
                 step={temperatureRange.precision}
                 value={temperature ?? temperatureRange.min}
                 onChange={e => setTemperature(Number(e.target.value))}
-                className="w-full accent-[#176f91] dark:accent-primary"
+                className="w-full accent-[#176f91] dark:accent-control-accent"
               />
               <div className="flex justify-between text-xs text-slate-500 dark:text-muted mt-1">
                 <span>{temperatureRange.min}°C</span>
@@ -373,14 +373,14 @@ export const ThermostatSettingsModal: React.FC<ThermostatSettingsModalProps> = (
           <button
             onClick={handleApply}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-primary text-[#176f91] dark:text-primary hover:bg-[#176f91]/10 dark:hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-[#176f91] dark:border-control-accent text-[#176f91] dark:text-control-accent hover:bg-[#176f91]/10 dark:hover:bg-control-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Применить'}
           </button>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-primary hover:bg-[#145a72] dark:hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-[#176f91] dark:bg-control-accent hover:bg-[#145a72] dark:hover:bg-control-accent-hover text-white dark:text-control-accent-on disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Применение...' : 'Закрыть'}
           </button>

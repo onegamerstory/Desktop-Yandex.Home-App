@@ -16,6 +16,12 @@
   --accent-on: #ffffff;
   --accent-hover: #145a72;
   --accent-active: #0f4c63;
+  --outline-accent: var(--accent);
+  --control-accent: var(--accent);
+  --control-accent-hover: var(--accent-hover);
+  --control-accent-on: #ffffff;
+  --control-selected-bg: color-mix(in oklab, var(--control-accent) 18%, var(--surface));
+  --control-selected-hover: color-mix(in oklab, var(--control-accent) 26%, var(--surface));
   --success: #16a34a;
   --warn: #eab308;
   --danger: #dc2626;
@@ -42,7 +48,7 @@
   --elev-flat: none;
   --elev-ring: 0 0 0 1px var(--border);
   --elev-raised: 0 12px 32px rgba(0, 0, 0, 0.08);
-  --focus-ring: 0 0 0 4px color-mix(in oklab, var(--accent), transparent 65%);
+  --focus-ring: 0 0 0 4px color-mix(in oklab, var(--outline-accent), transparent 65%);
   --motion-fast: 150ms;
   --motion-base: 220ms;
   --ease-standard: cubic-bezier(0.28, 0, 0.22, 1);
@@ -309,8 +315,8 @@ body {
   background: var(--accent);
   color: var(--accent-on);
   opacity: 1;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 75%, white),
-    0 0 14px color-mix(in oklab, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--outline-accent) 75%, white),
+    0 0 14px color-mix(in oklab, var(--outline-accent) 45%, transparent);
 }
 
 [data-theme="dark"] .content-actions .header-btn.active:hover {
@@ -318,11 +324,19 @@ body {
 }
 
 [data-theme="dark"] .dark\:bg-primary\/20 {
-  background-color: color-mix(in oklab, var(--accent) 12%, var(--surface));
+  background-color: var(--control-selected-bg);
 }
 
 [data-theme="dark"] .dark\:hover\:bg-primary\/20:hover {
-  background-color: color-mix(in oklab, var(--accent) 18%, var(--surface));
+  background-color: var(--control-selected-hover);
+}
+
+[data-theme="dark"] .dark\:bg-control-accent\/20 {
+  background-color: var(--control-selected-bg);
+}
+
+[data-theme="dark"] .dark\:hover\:bg-control-accent\/20:hover {
+  background-color: var(--control-selected-hover);
 }
 
 .content-actions .header-btn:disabled {
@@ -611,6 +625,10 @@ body {
   -webkit-backdrop-filter: blur(20px);
 }
 
+[data-color-scheme] .device-card:not(.is-on) {
+  background: var(--card-bg);
+}
+
 .device-card:hover {
   background: color-mix(in oklab, var(--card-bg), white 6%);
 }
@@ -618,6 +636,10 @@ body {
 [data-theme="dark"] .device-card:hover {
   background: color-mix(in oklab, rgba(36, 35, 43, 0.38), white 6%);
   border-color: color-mix(in oklab, var(--border), white 15%);
+}
+
+[data-color-scheme] .device-card:hover {
+  background: color-mix(in oklab, var(--card-bg), white 6%);
 }
 
 .device-card.is-on {
@@ -919,7 +941,7 @@ body {
 
 .scenario-card:hover {
   background: var(--bg);
-  border-color: var(--accent);
+  border-color: var(--outline-accent);
 }
 
 .scenario-card.scenario-card--executed {
@@ -929,14 +951,14 @@ body {
 
 [data-theme="dark"] .scenario-card:hover {
   background: var(--card-bg-active);
-  border-color: var(--accent);
+  border-color: var(--outline-accent);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] .scenario-card.scenario-card--executed {
   background: color-mix(in oklab, var(--accent) 18%, var(--card-bg-active));
-  border-color: color-mix(in oklab, var(--accent) 52%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 52%, transparent);
+  border-color: color-mix(in oklab, var(--outline-accent) 52%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--outline-accent) 52%, transparent);
 }
 
 .scenario-card:active {
@@ -1388,7 +1410,7 @@ body {
 .background-save-button {
   color: var(--accent-on);
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--outline-accent);
 }
 
 @media (max-width: 600px) {

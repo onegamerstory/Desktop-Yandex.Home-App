@@ -1,39 +1,57 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { COLOR_SCHEMES, COLOR_SCHEME_IDS } from '../constants/colorSchemes';
+import type { ColorSchemeId } from '../constants/colorSchemes';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | ColorSchemeId;
 
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'app_theme';
+const isTheme = (value: string | null): value is Theme =>
+  value === 'light' || value === 'dark' || (
+    value !== null && Object.prototype.hasOwnProperty.call(COLOR_SCHEMES, value)
+  );
+
+const applyTheme = (theme: Theme) => {
+  const root = document.documentElement;
+  root.classList.toggle('dark', theme !== 'light');
+  root.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+
+  for (const schemeId of COLOR_SCHEME_IDS) {
+    for (const variable of Object.keys(COLOR_SCHEMES[schemeId].variables)) {
+      root.style.removeProperty(variable);
+    }
+  }
+
+  if (theme !== 'light' && theme !== 'dark') {
+    for (const [variable, value] of Object.entries(COLOR_SCHEMES[theme].variables)) {
+      root.style.setProperty(variable, value);
+    }
+    root.setAttribute('data-color-scheme', theme);
+  } else {
+    root.removeAttribute('data-color-scheme');
+  }
+};
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme;
-      const initialTheme = stored === 'light' || stored === 'dark' ? stored : 'dark';
-      if (initialTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      document.documentElement.setAttribute('data-theme', initialTheme);
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      const initialTheme = isTheme(stored) ? stored : 'dark';
+      applyTheme(initialTheme);
       return initialTheme;
     }
     return 'dark';
   });
 
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    document.documentElement.setAttribute('data-theme', theme);
+    applyTheme(theme);
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
     }
@@ -44,7 +62,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

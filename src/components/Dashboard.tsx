@@ -436,9 +436,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ hasUpdateAvailable }) => {
                                 <button
                                     onClick={toggleTheme}
                                     className="header-btn"
-                                    title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+                                    title={theme !== 'light' ? 'Светлая тема' : 'Тёмная тема'}
                                 >
-                                    {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                                    {theme !== 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                                 </button>
                                 <button
                                     onClick={ctx.onRefresh}
