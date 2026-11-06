@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import { YandexUserInfoResponse, YandexHousehold, YandexDevice, YandexGroup, YandexModeAction, CameraStreamResult } from '../types/index';
+import { LightActionRequest } from '../utils/deviceActions';
 
 export interface DashboardContextValue {
     // Данные
@@ -20,6 +21,7 @@ export interface DashboardContextValue {
     onToggleGroup: (id: string, currentState: boolean) => Promise<void>;
     onExecuteScenario: (id: string) => Promise<void>;
     onSetDeviceMode: (deviceId: string, modeActions: YandexModeAction[], turnOn?: boolean) => Promise<void>;
+    onSetLightSettings: (requests: LightActionRequest[], turnOn?: boolean) => Promise<void>;
     onGetCameraStream: (deviceId: string) => Promise<CameraStreamResult>;
     onSetCameraPrivacy: (deviceId: string, enabled: boolean, instance?: string) => Promise<void>;
     onRefresh: () => void;

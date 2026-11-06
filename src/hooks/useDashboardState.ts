@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { YandexDevice, YandexGroup, YandexModeAction } from '../types/index';
-import { buildLightActions, LightActionSettings } from '../utils/deviceActions';
+import { buildLightActionGroups, LightActionRequest, LightActionSettings } from '../utils/deviceActions';
 import { isSensorDevice } from '../constants/deviceTypes';
 import { SensorDisplayConfig } from '../components/modals/SensorSettingsModal';
 
@@ -128,6 +128,7 @@ export function useDashboardState(
     activeHouseholdId: string | null,
     activeSidebarView: 'home' | 'room' | 'group',
     onSetDeviceMode: (deviceId: string, modeActions: YandexModeAction[], turnOn?: boolean) => Promise<void>,
+    onSetLightSettings: (requests: LightActionRequest[], turnOn?: boolean) => Promise<void>,
     data: { devices: YandexDevice[] },
     isCameraDevice: (device: YandexDevice) => boolean,
     isLightDevice: (type: string) => boolean,
@@ -412,24 +413,22 @@ export function useDashboardState(
 
     const handleApplyLightBrightness = useCallback(async (settings: LightActionSettings) => {
         if (!selectedLightDevice) return;
-        const actions = buildLightActions(settings);
-        if (actions.length > 0) {
-            await onSetDeviceMode(selectedLightDevice.id, actions, true);
+        const actionGroups = buildLightActionGroups(settings);
+        if (actionGroups.length > 0) {
+            await onSetLightSettings([{ deviceId: selectedLightDevice.id, actionGroups }], true);
         }
-    }, [selectedLightDevice, onSetDeviceMode]);
+    }, [selectedLightDevice, onSetLightSettings]);
 
     const handleApplyGroupLightBrightness = useCallback(async (settings: LightActionSettings) => {
         if (!selectedLightGroup) return;
         const groupDevices = data.devices.filter(d => selectedLightGroup.devices.includes(d.id));
         if (groupDevices.length === 0) return;
-        const updatePromises = groupDevices.map(async (device) => {
-            const actions = buildLightActions(settings);
-            if (actions.length > 0) {
-                await onSetDeviceMode(device.id, actions, true);
-            }
-        });
-        await Promise.all(updatePromises);
-    }, [selectedLightGroup, data.devices, onSetDeviceMode]);
+        const actionGroups = buildLightActionGroups(settings);
+        if (actionGroups.length > 0) {
+            const requests = groupDevices.map(device => ({ deviceId: device.id, actionGroups }));
+            await onSetLightSettings(requests, true);
+        }
+    }, [selectedLightGroup, data.devices, onSetLightSettings]);
 
     const handleApplyGroupThermostatSettings = useCallback(async (modeActions: Array<{ instance: string; value: string }>) => {
         if (!selectedThermostatGroup) return;

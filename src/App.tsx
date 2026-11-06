@@ -38,7 +38,7 @@ function App() {
     // 4. Зависит от userData, token, refreshDashboardData, requestXTokenAuth
     const actions = useDeviceActions(token, userData, showNotification, refreshDashboardData, requestXTokenAuth);
     const { handleToggleDevice, handleToggleGroup, handleExecuteScenario,
-            handleSetDeviceMode, handleGetCameraStream, handleSetCameraPrivacy } = actions;
+            handleSetDeviceMode, handleSetLightSettings, handleGetCameraStream, handleSetCameraPrivacy } = actions;
     const household = useHousehold(userData, token, refreshDashboardData);
     const { activeHouseholdId, handleSwitchHousehold } = household;
 
@@ -314,6 +314,7 @@ function App() {
                     onToggleGroup: handleToggleGroup,
                     onExecuteScenario: handleExecuteScenario,
                     onSetDeviceMode: handleSetDeviceMode,
+                    onSetLightSettings: handleSetLightSettings,
                     onGetCameraStream: handleGetCameraStream,
                     onSetCameraPrivacy: handleSetCameraPrivacy,
                     onRefresh: () => token && refreshDashboardData(token),
